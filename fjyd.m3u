@@ -60,9 +60,9 @@ http://ott.fj.chinamobile.com/PLTV/88888888/224/3221225822/index.m3u8
 #EXTINF:-1 tvg-id="CCTV1" tvg-name="CCTV1" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/CCTV1.png" group-title="央视",CCTV1
 http://ott.fj.chinamobile.com/PLTV/88888888/224/3221226908/index.m3u8
 #EXTINF:-1 tvg-id="凤凰中文" tvg-name="凤凰中文" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/fenghuangzhongwen.png" group-title="卫视",凤凰中文
-https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/xg.js?id=fhzw
+https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/xg.js?id=fhzw
 #EXTINF:-1 tvg-id="凤凰资讯" tvg-name="凤凰资讯" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/fenghuangzixun.png" group-title="卫视",凤凰资讯
-https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/xg.js?id=fhzx
+https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/xg.js?id=fhzx
 #EXTINF:-1 tvg-id="广东卫视" tvg-name="广东卫视" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/广东卫视.png" group-title="卫视",广东卫视
 http://ott.fj.chinamobile.com/PLTV/88888888/224/3221225824/index.m3u8
 #EXTINF:-1 tvg-id="浙江卫视" tvg-name="浙江卫视" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/浙江卫视.png" group-title="卫视",浙江卫视
