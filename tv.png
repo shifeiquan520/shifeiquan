@@ -1,0 +1,363 @@
+央视频道,#genre#
+
+CCTV-1 综合,  https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=608807420
+CCTV-2 财经, https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=631780532
+CCTV-3 综艺,  https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=624878271
+CCTV-4 中文国际,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=631780421
+CCTV-5 体育,  https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=641886683
+CCTV-5+ 体育赛事, https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=641886773
+CCTV-6 电影,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=624878396
+CCTV-7 国防军事,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=673168121
+CCTV-8 电视剧,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=624878356
+CCTV-9 纪录,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=673168140
+CCTV-10 科教,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=624878405
+CCTV-11 戏曲,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=667987558
+CCTV-12 社会与法,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=673168185
+CCTV-13 新闻,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=608807423
+CCTV-14 少儿,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=624878440
+CCTV-15 音乐,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=673168223
+CCTV-17 农业农村,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=673168256
+CCTV 发现之旅,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=624878970
+CCTV 老故事,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=884121956
+CCTV 中学生,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=708869532
+
+CCTV-1 综合,http://39.106.167.36:52666/fjbst.php?id=165
+CCTV-2 财经,http://39.106.167.36:52666/fjbst.php?id=166
+CCTV-4 中文国际,http://39.106.167.36:52666/fjbst.php?id=167
+CCTV-7 国防军事,http://39.106.167.36:52666/fjbst.php?id=168
+CCTV-9 纪录,http://39.106.167.36:52666/fjbst.php?id=169
+CCTV-10 科教,http://39.106.167.36:52666/fjbst.php?id=170
+CCTV-11 戏曲,http://39.106.167.36:52666/fjbst.php?id=171
+CCTV-12 社会与法,http://39.106.167.36:52666/fjbst.php?id=172
+CCTV-13 新闻,http://39.106.167.36:52666/fjbst.php?id=173
+CCTV-14 少儿,http://39.106.167.36:52666/fjbst.php?id=174
+CCTV-15 音乐,http://39.106.167.36:52666/fjbst.php?id=175
+CCTV-17 农业农村,ttp://39.106.167.36:52666/fjbst.php?id=176
+
+
+
+
+
+CCTV-1 综合,webview://https://yangshipin.cn/tv/home?pid=600001859
+CCTV-2 财经,webview://https://yangshipin.cn/tv/home?pid=600001800
+CCTV-3 综艺,webview://https://yangshipin.cn/tv/home?pid=600001801
+CCTV-4 中文国际,webview://https://yangshipin.cn/tv/home?pid=600001814
+CCTV-5 体育,webview://https://yangshipin.cn/tv/home?pid=600001818
+CCTV-5+ 体育赛事,webview://https://yangshipin.cn/tv/home?pid=600001817
+CCTV-6 电影,webview://https://yangshipin.cn/tv/home?pid=600108442
+CCTV-7 国防军事,webview://https://yangshipin.cn/tv/home?pid=600004092
+CCTV-8 电视剧,webview://https://yangshipin.cn/tv/home?pid=600001803
+CCTV-9 纪录,webview://https://yangshipin.cn/tv/home?pid=600004078
+CCTV-10 科教,webview://https://yangshipin.cn/tv/home?pid=600001805
+CCTV-11 戏曲,webview://https://yangshipin.cn/tv/home?pid=600001806
+CCTV-12 社会与法,webview://https://yangshipin.cn/tv/home?pid=600001807
+CCTV-13 新闻,webview://https://yangshipin.cn/tv/home?pid=600001811
+CCTV-14 少儿,webview://https://yangshipin.cn/tv/home?pid=600001809
+CCTV-15 音乐,webview://https://yangshipin.cn/tv/home?pid=600001815
+CCTV-16 奥林匹克,webview://https://yangshipin.cn/tv/home?pid=600098637
+CCTV-17 农业农村,webview://https://yangshipin.cn/tv/home?pid=600001810
+风云剧场,webview://https://yangshipin.cn/tv/home?pid=600099658
+第一剧场,webview://https://yangshipin.cn/tv/home?pid=600099655
+怀旧剧场,webview://https://yangshipin.cn/tv/home?pid=600099620
+
+
+
+
+CCTV-1 综合,webview://https://tv.cctv.com/live/cctv1/
+CCTV-2 财经,webview://https://tv.cctv.com/live/cctv2/
+CCTV-3 综艺,webview://https://tv.cctv.com/live/cctv3/
+CCTV-4 中文国际,webview://https://tv.cctv.com/live/cctv4/
+CCTV-5 体育,webview://https://tv.cctv.com/live/cctv5/
+CCTV-5+ 体育赛事,webview://https://tv.cctv.com/live/cctv5plus/
+CCTV-6 电影,webview://https://tv.cctv.com/live/cctv6/
+CCTV-7 国防军事,webview://https://tv.cctv.com/live/cctv7/
+CCTV-8 电视剧,webview://https://tv.cctv.com/live/cctv8/
+CCTV-9 纪录,webview://https://tv.cctv.com/live//cctvjilu/
+CCTV-10 科教,webview://https://tv.cctv.com/live/cctv10/
+CCTV-11 戏曲,webview://https://tv.cctv.com/live/cctv11/
+CCTV-12 社会与法,webview://https://tv.cctv.com/live/cctv12/
+CCTV-13 新闻,webview://https://tv.cctv.com/live/cctv13/
+CCTV-14 少儿,webview://https://tv.cctv.com/live/cctvchild/
+CCTV-15 音乐,webview://https://tv.cctv.com/live/cctv15/
+CCTV-16 奥林匹克,webview://https://tv.cctv.com/live/cctv16/
+CCTV-17 农业农村,webview://https://tv.cctv.com/live/cctv17/
+CCTV4欧洲,webview://https://tv.cctv.com/live/cctveurope/index.shtml
+CCTV4美洲,webview://https://tv.cctv.com/live/cctvamerica/
+
+
+
+卫视频道,#genre#
+
+浙江卫视,webview://https://yangshipin.cn/tv/home?pid=600002520
+湖南卫视,webview://https://yangshipin.cn/tv/home?pid=600002475
+江苏卫视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=623899368
+东方卫视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=651632648
+重庆卫视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=738910914
+辽宁卫视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=630291707
+宁夏卫视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=738910535
+陕西卫视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=738910838
+河南卫视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=790187291
+江西卫视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=783847495
+广东卫视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=608831231
+大湾区卫视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=608917627
+
+
+
+湖南卫视,http://39.106.167.36:52666/fjbst.php?id=180
+江苏卫视,http://39.106.167.36:52666/fjbst.php?id=181
+都市剧场,http://39.106.167.36:52666/fjbst.php?id=220
+浙江卫视,http://39.106.167.36:52666/fjbst.php?id=182
+东方卫视,http://39.106.167.36:52666/fjbst.php?id=179
+河北卫视,http://39.106.167.36:52666/fjbst.php?id=183
+广东卫视,http://39.106.167.36:52666/fjbst.php?id=184
+山东卫视,http://39.106.167.36:52666/fjbst.php?id=185
+湖北卫视,http://39.106.167.36:52666/fjbst.php?id=186
+深圳卫视,http://39.106.167.36:52666/fjbst.php?id=187
+黑龙江,http://39.106.167.36:52666/fjbst.php?id=188
+贵州卫视,http://39.106.167.36:52666/fjbst.php?id=189
+安徽卫视,http://39.106.167.36:52666/fjbst.php?id=190
+天津卫视,http://39.106.167.36:52666/fjbst.php?id=191
+四川卫视,http://39.106.167.36:52666/fjbst.php?id=192
+江西卫视,http://39.106.167.36:52666/fjbst.php?id=193
+辽宁卫视,http://39.106.167.36:52666/fjbst.php?id=194
+重庆卫视,http://39.106.167.36:52666/fjbst.php?id=195
+北京卫视,http://39.106.167.36:52666/fjbst.php?id=196
+云南卫视,http://39.106.167.36:52666/fjbst.php?id=197
+河南卫视,http://39.106.167.36:52666/fjbst.php?id=198
+海南卫视,http://39.106.167.36:52666/fjbst.php?id=199
+广西卫视,http://39.106.167.36:52666/fjbst.php?id=200
+陝西卫视,http://39.106.167.36:52666/fjbst.php?id=201
+青海卫视,http://39.106.167.36:52666/fjbst.php?id=202
+宁夏卫视,http://39.106.167.36:52666/fjbst.php?id=203
+CETV1,http://39.106.167.36:52666/fjbst.php?id=204
+CETV2,http://39.106.167.36:52666/fjbst.php?id=206
+金鹰卡通,http://39.106.167.36:52666/fjbst.php?id=208
+卡酷少儿,http://39.106.167.36:52666/fjbst.php?id=209
+吉林卫视,http://39.106.167.36:52666/fjbst.php?id=210
+山西卫视,http://39.106.167.36:52666/fjbst.php?id=211
+甘肃卫视,http://39.106.167.36:52666/fjbst.php?id=212
+内蒙古,http://39.106.167.36:52666/fjbst.php?id=213
+新疆卫视,http://39.106.167.36:52666/fjbst.php?id=214
+兵团卫视,http://39.106.167.36:52666/fjbst.php?id=215
+西藏卫视,http://39.106.167.36:52666/fjbst.php?id=216
+三沙卫视,http://39.106.167.36:52666/fjbst.php?id=217
+
+湖南卫视,webview://https://yangshipin.cn/tv/home?pid=600002475
+江苏卫视,webview://https://yangshipin.cn/tv/home?pid=600002521
+北京卫视,webview://https://yangshipin.cn/tv/home?pid=600002309
+东方卫视,webview://https://yangshipin.cn/tv/home?pid=600002483
+湖北卫视,webview://https://yangshipin.cn/tv/home?pid=600002508
+广东卫视,webview://https://yangshipin.cn/tv/home?pid=600002485
+广西卫视,webview://https://yangshipin.cn/tv/home?pid=600002509
+黑龙江卫视,webview://https://yangshipin.cn/tv/home?pid=600002498
+海南卫视,webview://https://yangshipin.cn/tv/home?pid=600002506
+重庆卫视,webview://https://yangshipin.cn/tv/home?pid=600002531
+深圳卫视,webview://https://yangshipin.cn/tv/home?pid=600002481
+四川卫视,webview://https://yangshipin.cn/tv/home?pid=600002516
+河南卫视,webview://https://yangshipin.cn/tv/home?pid=600002525
+东南卫视,webview://https://yangshipin.cn/tv/home?pid=600002484
+贵州卫视,webview://https://yangshipin.cn/tv/home?pid=600002490
+江西卫视,webview://https://yangshipin.cn/tv/home?pid=600002503
+辽宁卫视,webview://https://yangshipin.cn/tv/home?pid=600002505
+安徽卫视,webview://https://yangshipin.cn/tv/home?pid=600002532
+河北卫视,webview://https://yangshipin.cn/tv/home?pid=600002493
+山东卫视,webview://https://yangshipin.cn/tv/home?pid=600002513
+天津卫视,webview://https://yangshipin.cn/tv/home?pid=600152137
+吉林卫视,webview://https://yangshipin.cn/tv/home?pid=600190405
+陕西卫视,webview://https://yangshipin.cn/tv/home?pid=600190400
+宁夏卫视,webview://https://yangshipin.cn/tv/home?pid=600190737
+内蒙古卫视,webview://https://yangshipin.cn/tv/home?pid=600190401
+云南卫视,webview://https://yangshipin.cn/tv/home?pid=600190402
+山西卫视,webview://https://yangshipin.cn/tv/home?pid=600190407
+青海卫视,webview://https://yangshipin.cn/tv/home?pid=600190406
+西藏卫视,webview://https://yangshipin.cn/tv/home?pid=600190403
+甘肃卫视,webview://https://yangshipin.cn/tv/home?pid=600190408
+
+
+福建频道,#genre#
+
+福建新闻,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/fjtv.js?id=fjxw
+福建旅游,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/fjtv.js?id=fjly
+福建综合,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/fjtv.js?id=fjzh
+东南卫视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/fjtv.js?id=dnws
+公共频道,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/fjtv.js?id=fjgg
+福建电视剧,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/fjtv.js?id=fjdsj
+福建经视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/fjtv.js?id=fjjs
+福建文体,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/fjtv.js?id=fjwt
+福建少儿,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/fjtv.js?id=fjse
+海峡卫视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/fjtv.js?id=hxws
+
+福建综合,http://39.106.167.36:52666/fjbst.php?id=154
+东南卫视,http://39.106.167.36:52666/fjbst.php?id=155
+公共频道,http://39.106.167.36:52666/fjbst.php?id=156
+福建新闻,http://39.106.167.36:52666/fjbst.php?id=157
+福建电视剧,http://39.106.167.36:52666/fjbst.php?id=158
+福建旅游,http://39.106.167.36:52666/fjbst.php?id=159
+福建经济,http://39.106.167.36:52666/fjbst.php?id=160
+福建文体,http://39.106.167.36:52666/fjbst.php?id=161
+福建少儿,http://39.106.167.36:52666/fjbst.php?id=162
+海峽卫视,http://39.106.167.36:52666/fjbst.php?id=163
+厦门卫视,http://39.106.167.36:52666/fjbst.php?id=164
+
+港台频道,#genre#
+凤凰中文,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/xg.js?id=fhzw
+凤凰资讯,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/xg.js?id=fhzx
+香港卫视,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/xg.js?id=fhhk
+
+
+环球经典影院,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/1905.js?id=1905b
+流金岁月影院,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/1905.js?id=1905
+
+经典香港电影,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=625703337
+抗战经典影片,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=617432318
+新片放映厅,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=619495952
+CHC影迷电影,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=952383261
+经典动画大集合,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=629942219
+嘉佳卡通,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/migu.js?id=614952364
+
+游戏频道,#genre#
+
+
+
+
+王者荣耀KPL,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/hy.js?id=660002
+王者荣耀KPL,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/dy.js?id=1863767
+王者荣耀K甲,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/hy.js?id=660164
+王者荣耀K甲,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/dy.js?id=1984839
+[虎牙]马可宇晨,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/hy.js?id=691346
+[虎牙]花木兰紫宸,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/hy.js?id=859042
+[虎牙]芈月云天河,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/hy.js?id=230214
+[虎牙]明眸关羽,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/hy.js?id=786724
+[虎牙]金牌花木兰,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/hy.js?id=547825
+[斗鱼]甄知棒,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/dy.js?id=3014399
+[斗鱼]慢慢的关羽,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/dy.js?id=4926715
+
+
+
+
+
+
+
+王者荣耀KPL,https://www.goodiptv.club/huya/660002
+王者荣耀KPL,https://www.goodiptv.club/douyu/1863767
+王者荣耀K甲,https://www.goodiptv.club/huya/660164
+王者荣耀K甲,https://www.goodiptv.club/douyu/1984839
+[虎牙]马可宇晨,https://www.goodiptv.club/huya/691346
+[虎牙]花木兰紫宸,https://www.goodiptv.club/huya/859042
+[虎牙]芈月云天河,https://www.goodiptv.club/huya/230214
+[虎牙]明眸关羽,https://www.goodiptv.club/huya/786724
+[虎牙]金牌花木兰,https://www.goodiptv.club/huya/547825
+[斗鱼]甄知棒,https://www.goodiptv.club/douyu/3014399
+[斗鱼]慢慢的关羽,https://www.goodiptv.club/douyu/4926715
+
+
+
+
+
+王者荣耀KPL,https://live.ottiptv.cc/huya/660002
+王者荣耀K甲,https://live.ottiptv.cc/huya/660164
+[虎牙]马可宇晨,https://live.ottiptv.cc/huya/691346
+[虎牙]花木兰紫宸,https://live.ottiptv.cc/huya/859042
+[虎牙]芈月云天河,https://live.ottiptv.cc/huya/230214
+[虎牙]明眸关羽,https://live.ottiptv.cc/huya/786724
+[虎牙]金牌花木兰,https://live.ottiptv.cc/huya/547825
+
+
+
+王者荣耀KPL,https://live.iill.top/douyu/1863767
+王者荣耀KPL,https://live.iill.top/huya/660002
+王者荣耀K甲,https://live.iill.top/huya/660164
+王者荣耀K甲,https://live.iill.top/douyu/1984839
+[虎牙]马可宇晨,https://live.iill.top/huya/691346
+[虎牙]花木兰紫宸,https://live.iill.top/huya/859042
+[虎牙]芈月云天河,https://live.iill.top/huya/230214
+[虎牙]明眸关羽,https://live.iill.top/huya/786724
+[虎牙]金牌花木兰,https://live.iill.top/huya/547825
+[斗鱼]甄知棒,https://live.iill.top/douyu/3014399
+[斗鱼]慢慢的关羽,https://live.iill.top/douyu/4926715
+
+台湾十二大美女,#genre#
+爱情的骗子我问你,https://vdse.bdstatic.com//09df8211e002b274125faa4006e55a8c.mp4
+爱人跟我走,https://vdse.bdstatic.com//80b344836cec00593a1f66c775af591f.mp4
+爱拼才会赢,https://vdse.bdstatic.com//7298e0d3e87e6bb85ae6421e8d719d22.mp4
+浪子的心情,https://vdse.bdstatic.com//dcb31c62161d52d4550bf9550a9e47d9.mp4
+爱情一阵风,https://vdse.bdstatic.com//4a2004fed737daed5b4678a2a48232d3.mp4
+杯中影,https://vdse.bdstatic.com//21d1969f04afb83163157e6e0861cda6.mp4
+干一杯,https://vdse.bdstatic.com//32523ad88670fade3b256b163d9d432d.mp4
+朋友情,https://vdse.bdstatic.com//8e8ac69c239ee3f15ca9e38e0c2138a7.mp4
+初恋,https://vdse.bdstatic.com//955d3578ffad59f06d30ff72c4e963e6.mp4
+男性的本领,https://vdse.bdstatic.com//08e9d0b66ffa95ba0890becdfda6f004.mp4
+忍,https://vdse.bdstatic.com//5ec5ba1eda2dabcc002766bee28c9ea6.mp4
+烧酒话,https://vdse.bdstatic.com//77d7584cbc7ab5c025d9e6edd92908c8.mp4
+为你打拼,https://vdse.bdstatic.com//dca1c8e2ccbbf88d8a2fca89b66a7d74.mp4
+真情放水流,https://vdse.bdstatic.com//1bfc1f52516b30c5f1bf379f5b935dc3.mp4
+欢喜干一杯,https://vdse.bdstatic.com//56755137687ca2e78504b3c0f94f48a1.mp4
+思慕的形影,https://vdse.bdstatic.com//2dd14d307a8e742b849eb989111d5f21.mp4
+心痛,https://vdse.bdstatic.com//5d5e35738afd9aacf06f2ff8a6a1cd07.mp4
+心花为你开,https://vdse.bdstatic.com//1d53a4350874a91fa8d4065941a3966a.mp4
+可怜的人,https://vdse.bdstatic.com//b2fe060c18709d6d1271a37750b67bea.mp4
+人生的第一步,https://vdse.bdstatic.com//0762446553016060282e30f649c5250d.mp4
+故乡,https://vdse.bdstatic.com//bd5fddf9acfc28b53be50e9d2282a081.mp4
+男儿的心情,https://vdse.bdstatic.com//7dc935480f7768a08198380d8b3be41e.mp4
+奋斗的歌手,https://vdse.bdstatic.com//917db94a8adce94419f7ff72906986ca.mp4
+痴情花,https://vdse.bdstatic.com//f2205c7168370a153d97f041e3340cde.mp4
+情累,https://vdse.bdstatic.com//f20c9220ecd2ba9cccfe49c647ae82b0.mp4
+无彩我爱你,https://vdse.bdstatic.com//1d1f29214693725ca62776a8dbc6df51.mp4
+免饮人先醉,https://vdse.bdstatic.com//bd36b1b1f8a123f2a713e10e24cb0a59.mp4
+真情乎人出卖,https://vdse.bdstatic.com//8888a39f2142c2fb791149eeb203934a.mp4
+爱情的酒,https://vdse.bdstatic.com//9894a0dad55a21cfb6722eca9447ae4e.mp4
+故乡的阿姆,https://vdse.bdstatic.com//bcecea94c50eb8ebcf30858e166461c2.mp4
+做总统大家有机会,https://vdse.bdstatic.com//92256870a4b6560b7ed9203dba12a4b0.mp4
+歌声恋情,https://vdse.bdstatic.com//072efd88d8bac4c5a1e7c719cde324c9.mp4
+天星伴天涯,https://vdse.bdstatic.com//3ad30c6d35ca85405d834d9d6af9f8ab.mp4
+最后的探戈,https://vdse.bdstatic.com//0f229e2c2a6af6ee42ab7c2860276f60.mp4
+
+
+咪咕视界,#genre#
+
+咪视界1,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000001000005308
+咪视界2,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000001000005969
+咪视界3,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000001000007218
+咪视界4,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000001000008001
+咪视界5,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000001000008176
+咪视界6,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000001000008379
+咪视界7,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000001000010129
+咪视界8,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000001000010948
+咪视界9,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000001000028638
+咪视界10,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000001000031494
+咪视界11,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000000097
+咪视界12,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000002019
+咪视界13,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000002809
+咪视界14,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000003915
+咪视界15,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000004193
+咪视界16,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000005837
+咪视界17,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000006077
+咪视界18,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000006658
+咪视界19,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000009788
+咪视界20,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000010833
+咪视界21,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000011297
+咪视界22,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000011518
+咪视界23,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000012558
+咪视界24,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000012616
+咪视界25,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000015470
+咪视界26,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000015560
+咪视界27,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000017678
+咪视界28,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000019839
+咪视界29,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000021904
+咪视界30,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000023434
+咪视界31,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000025380
+咪视界32,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000027691
+咪视界33,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000031669
+咪视界34,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000020000011518
+咪视界35,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000020000011519
+咪视界36,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000020000011520
+咪视界37,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000020000011521
+咪视界38,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000020000011522
+咪视界4k,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000010000005180
+睛彩竞技,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000020000011528
+睛彩篮球,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000020000011529
+睛彩青少,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000020000011525
+睛彩广场舞,https://gitee.com/k-web/ku9/js/shifeiquan/tvbox/raw/master/ku9/itv.js?id=3000000020000011523
+
+
+
