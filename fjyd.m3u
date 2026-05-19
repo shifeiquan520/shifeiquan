@@ -127,18 +127,10 @@ http://ott.fj.chinamobile.com/PLTV/88888888/224/3221225855/index.m3u8
 http://ott.fj.chinamobile.com/PLTV/88888888/224/3221225856/index.m3u8
 #EXTINF:-1 tvg-id="福建综合" tvg-name="福建综合" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/福建综合.png" group-title="福建",福建综合
 http://ott.fj.chinamobile.com/PLTV/88888888/224/3221227149/index.m3u8
-#EXTINF:-1 tvg-id="福建公共" tvg-name="福建公共" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/福建公共.png" group-title="福建",福建公共
-http://ott.fj.chinamobile.com/PLTV/88888888/224/3221227153/index.m3u8
 #EXTINF:-1 tvg-id="福建新闻" tvg-name="福建新闻" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/福建新闻.png" group-title="福建",福建新闻
 http://ott.fj.chinamobile.com/PLTV/88888888/224/3221227180/index.m3u8
-#EXTINF:-1 tvg-id="福建电视剧" tvg-name="福建电视剧" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/福建电视剧.png" group-title="福建",福建电视剧
-http://ott.fj.chinamobile.com/PLTV/88888888/224/3221227079/index.m3u8
 #EXTINF:-1 tvg-id="福建旅游" tvg-name="福建旅游" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/福建旅游.png" group-title="福建",福建旅游
 http://ott.fj.chinamobile.com/PLTV/88888888/224/3221227190/index.m3u8
-#EXTINF:-1 tvg-id="福建经济" tvg-name="福建经济" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/福建经济.png" group-title="福建",福建经济
-http://ott.fj.chinamobile.com/PLTV/88888888/224/3221227184/index.m3u8
-#EXTINF:-1 tvg-id="福建文体" tvg-name="福建文体" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/福建文体.png" group-title="福建",福建文体
-http://ott.fj.chinamobile.com/PLTV/88888888/224/3221227188/index.m3u8
 #EXTINF:-1 tvg-id="福建少儿" tvg-name="福建少儿" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/福建少儿.png" group-title="福建",福建少儿
 http://ott.fj.chinamobile.com/PLTV/88888888/224/3221227194/index.m3u8
 #EXTINF:-1 tvg-id="海峡卫视" tvg-name="海峡卫视" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/海峡卫视.png" group-title="卫视",海峡卫视
