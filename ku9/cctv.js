@@ -1,19 +1,16 @@
 /**
- * 央视频直播/回看解析 - 酷9 JS版（修复二进制Base64问题）
+ * 央视频直播/回看解析 - 酷9 JS版（修复AES cKey）
  * 用法：?id=频道ID (如 cctv5)
  *       ?id=频道ID&playseek=20260517120000-20260517130000 (回看)
  */
 function main(item) {
     // ======================== 常量 ========================
-    var DELTA = 0x9e3779b9;
-    var ROUNDS = 16;
-    var LOG_ROUNDS = 4;
-    var SALT_LEN = 2;
-    var ZERO_LEN = 7;
-    var TEA_CKEY = '59b2f7cf725ef43c34fdd7c123411ed3';
     var XOR_KEY = [0x84,0x2E,0xED,0x08,0xF0,0x66,0xE6,0xEA,0x48,0xB4,0xCA,0xA9,0x91,0xED,0x6F,0xF3];
-    var STANDARD_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-    var CUSTOM_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-=';
+    var AES_KEY_HEX = '4E2918885FD98109869D14E0231A0BF4';
+    var AES_IV_HEX  = '16B17E519DDD0CE5B79D7A63A4DD801C';
+    var SR = 'mg3c3b04ba';
+    var NN = 'https://m.yangshipin.cn/';
+    var UA_SUFFIX = '|mozilla/5.0 (iphone; cpu||Mozilla|Netscape|Win32|';
 
     // 频道列表（保持原有）
     var CHANNELS = {
@@ -85,6 +82,14 @@ function main(item) {
         for (var i = 0; i < hex.length; i+=2) s += String.fromCharCode(parseInt(hex.substr(i,2),16));
         return s;
     }
+    function bin2hex(str) {
+        var hex = '';
+        for (var i = 0; i < str.length; i++) {
+            var b = str.charCodeAt(i) & 0xFF;
+            hex += (b < 16 ? '0' : '') + b.toString(16);
+        }
+        return hex;
+    }
     function randomUUID() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
             var r = Math.random()*16|0, v = c==='x' ? r : (r&0x3|0x8);
@@ -98,10 +103,6 @@ function main(item) {
     }
     function packN(num) {
         return String.fromCharCode((num>>>24)&0xFF, (num>>>16)&0xFF, (num>>>8)&0xFF, num&0xFF);
-    }
-    function unpackN(s, off) {
-        return ((s.charCodeAt(off)&0xFF)<<24) | ((s.charCodeAt(off+1)&0xFF)<<16) |
-               ((s.charCodeAt(off+2)&0xFF)<<8)  | (s.charCodeAt(off+3)&0xFF);
     }
     function packn(num) {
         return String.fromCharCode((num>>>8)&0xFF, num&0xFF);
@@ -117,7 +118,7 @@ function main(item) {
         return r;
     }
 
-    // ★ 自定义字节级 Base64 编码/解码（完全替代内置函数，确保二进制安全）
+    // 标准字节级 Base64
     function base64EncodeBytes(bytes) {
         var alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
         var out = '';
@@ -135,179 +136,142 @@ function main(item) {
         return out;
     }
 
-    function base64DecodeToBytes(str) {
-        var alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-        str = str.replace(/=+$/, '');
-        var bytes = [];
-        for (var i = 0; i < str.length; i += 4) {
-            var c1 = alphabet.indexOf(str[i] || 'A');
-            var c2 = alphabet.indexOf(str[i+1] || 'A');
-            var c3 = alphabet.indexOf(str[i+2] || 'A');
-            var c4 = alphabet.indexOf(str[i+3] || 'A');
-            var bits = (c1 << 18) | (c2 << 12) | (c3 << 6) | c4;
-            bytes.push((bits >> 16) & 0xFF);
-            if (str[i+2] !== '=' && i+2 < str.length) bytes.push((bits >> 8) & 0xFF);
-            if (str[i+3] !== '=' && i+3 < str.length) bytes.push(bits & 0xFF);
+    // ======================== AES-128-CBC ========================
+    // AES S-Box
+    var S = [
+        0x63,0x7c,0x77,0x7b,0xf2,0x6b,0x6f,0xc5,0x30,0x01,0x67,0x2b,0xfe,0xd7,0xab,0x76,
+        0xca,0x82,0xc9,0x7d,0xfa,0x59,0x47,0xf0,0xad,0xd4,0xa2,0xaf,0x9c,0xa4,0x72,0xc0,
+        0xb7,0xfd,0x93,0x26,0x36,0x3f,0xf7,0xcc,0x34,0xa5,0xe5,0xf1,0x71,0xd8,0x31,0x15,
+        0x04,0xc7,0x23,0xc3,0x18,0x96,0x05,0x9a,0x07,0x12,0x80,0xe2,0xeb,0x27,0xb2,0x75,
+        0x09,0x83,0x2c,0x1a,0x1b,0x6e,0x5a,0xa0,0x52,0x3b,0xd6,0xb3,0x29,0xe3,0x2f,0x84,
+        0x53,0xd1,0x00,0xed,0x20,0xfc,0xb1,0x5b,0x6a,0xcb,0xbe,0x39,0x4a,0x4c,0x58,0xcf,
+        0xd0,0xef,0xaa,0xfb,0x43,0x4d,0x33,0x85,0x45,0xf9,0x02,0x7f,0x50,0x3c,0x9f,0xa8,
+        0x51,0xa3,0x40,0x8f,0x92,0x9d,0x38,0xf5,0xbc,0xb6,0xda,0x21,0x10,0xff,0xf3,0xd2,
+        0xcd,0x0c,0x13,0xec,0x5f,0x97,0x44,0x17,0xc4,0xa7,0x7e,0x3d,0x64,0x5d,0x19,0x73,
+        0x60,0x81,0x4f,0xdc,0x22,0x2a,0x90,0x88,0x46,0xee,0xb8,0x14,0xde,0x5e,0x0b,0xdb,
+        0xe0,0x32,0x3a,0x0a,0x49,0x06,0x24,0x5c,0xc2,0xd3,0xac,0x62,0x91,0x95,0xe4,0x79,
+        0xe7,0xc8,0x37,0x6d,0x8d,0xd5,0x4e,0xa9,0x6c,0x56,0xf4,0xea,0x65,0x7a,0xae,0x08,
+        0xba,0x78,0x25,0x2e,0x1c,0xa6,0xb4,0xc6,0xe8,0xdd,0x74,0x1f,0x4b,0xbd,0x8b,0x8a,
+        0x70,0x3e,0xb5,0x66,0x48,0x03,0xf6,0x0e,0x61,0x35,0x57,0xb9,0x86,0xc1,0x1d,0x9e,
+        0xe1,0xf8,0x98,0x11,0x69,0xd9,0x8e,0x94,0x9b,0x1e,0x87,0xe9,0xce,0x55,0x28,0xdf,
+        0x8c,0xa1,0x89,0x0d,0xbf,0xe6,0x42,0x68,0x41,0x99,0x2d,0x0f,0xb0,0x54,0xbb,0x16
+    ];
+    // Rcon
+    var Rcon = [0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36];
+
+    function keyExpansion(keyBytes) {
+        var w = [];
+        for (var i = 0; i < 16; i++) w.push(keyBytes[i]);
+        for (i = 4; i < 44; i++) {
+            var temp = [w[(i-1)*4], w[(i-1)*4+1], w[(i-1)*4+2], w[(i-1)*4+3]];
+            if (i % 4 === 0) {
+                // RotWord
+                temp = [temp[1], temp[2], temp[3], temp[0]];
+                // SubWord
+                temp[0] = S[temp[0]];
+                temp[1] = S[temp[1]];
+                temp[2] = S[temp[2]];
+                temp[3] = S[temp[3]];
+                // XOR Rcon
+                temp[0] ^= Rcon[(i/4)-1];
+            }
+            w.push((w[(i-4)*4] ^ temp[0]));
+            w.push((w[(i-4)*4+1] ^ temp[1]));
+            w.push((w[(i-4)*4+2] ^ temp[2]));
+            w.push((w[(i-4)*4+3] ^ temp[3]));
         }
-        return bytes;
+        return w;
     }
 
-    // 自定义编码：先标准 Base64 编码字节，再映射到自定义字符集
-    function customEncodeFromBytes(bytes) {
-        var stdB64 = base64EncodeBytes(bytes);
-        var map = {};
-        for (var i = 0; i < STANDARD_ALPHABET.length; i++) map[STANDARD_ALPHABET[i]] = CUSTOM_ALPHABET[i];
-        var out = '';
-        for (var i = 0; i < stdB64.length; i++) out += map[stdB64[i]] || stdB64[i];
-        return out.replace(/=+$/, '');
+    function aesEncryptBlock(block, keyBytes) {
+        var w = keyExpansion(keyBytes);
+        var state = block.slice();
+
+        function addRoundKey(round) {
+            for (var i = 0; i < 16; i++) state[i] ^= w[round*16 + i];
+        }
+        function subBytes() {
+            for (var i = 0; i < 16; i++) state[i] = S[state[i]];
+        }
+        function shiftRows() {
+            var t = state[1]; state[1] = state[5]; state[5] = state[9]; state[9] = state[13]; state[13] = t;
+            t = state[2]; state[2] = state[10]; state[10] = t;
+            t = state[6]; state[6] = state[14]; state[14] = t;
+            t = state[3]; state[3] = state[15]; state[15] = state[11]; state[11] = state[7]; state[7] = t;
+        }
+        function xtime(a) { return (a << 1) ^ ((a & 0x80) ? 0x11b : 0); }
+        function mixColumns() {
+            for (var c = 0; c < 4; c++) {
+                var i0 = c*4, i1 = c*4+1, i2 = c*4+2, i3 = c*4+3;
+                var s0 = state[i0], s1 = state[i1], s2 = state[i2], s3 = state[i3];
+                state[i0] = xtime(s0) ^ (xtime(s1) ^ s1) ^ s2 ^ s3;
+                state[i1] = s0 ^ xtime(s1) ^ (xtime(s2) ^ s2) ^ s3;
+                state[i2] = s0 ^ s1 ^ xtime(s2) ^ (xtime(s3) ^ s3);
+                state[i3] = (xtime(s0) ^ s0) ^ s1 ^ s2 ^ xtime(s3);
+            }
+        }
+
+        addRoundKey(0);
+        for (var round = 1; round <= 9; round++) {
+            subBytes();
+            shiftRows();
+            mixColumns();
+            addRoundKey(round);
+        }
+        subBytes();
+        shiftRows();
+        addRoundKey(10);
+        return state;
     }
 
-    // 自定义解码：反向映射后得到标准 Base64，再解码为字节数组
-    function customDecodeToBytes(str) {
-        // 补齐等号
-        while (str.length % 4 !== 0) str += '=';
-        var map = {};
-        for (var i = 0; i < CUSTOM_ALPHABET.length; i++) map[CUSTOM_ALPHABET[i]] = STANDARD_ALPHABET[i];
-        var stdB64 = '';
-        for (var i = 0; i < str.length; i++) stdB64 += map[str[i]] || str[i];
-        return base64DecodeToBytes(stdB64);
+    function aesCbcEncrypt(plainBytes, keyBytes, ivBytes) {
+        var padded = pkcs7Pad(plainBytes, 16);
+        var result = [];
+        var prev = ivBytes.slice();
+        for (var i = 0; i < padded.length; i += 16) {
+            var block = padded.slice(i, i+16);
+            for (var j = 0; j < 16; j++) block[j] ^= prev[j];
+            var enc = aesEncryptBlock(block, keyBytes);
+            for (var j = 0; j < 16; j++) result.push(enc[j]);
+            prev = enc.slice();
+        }
+        return result;
     }
 
-    // ======================== TEA / CBC ========================
-    function teaEncryptECB(plain, key) {
-        var y = unpackN(plain,0), z = unpackN(plain,4);
-        var k0 = unpackN(key,0), k1 = unpackN(key,4), k2 = unpackN(key,8), k3 = unpackN(key,12);
-        var sum = 0;
-        for (var i = 0; i < ROUNDS; i++) {
-            sum = (sum + DELTA) >>> 0;
-            y = (y + ((((z<<4)>>>0) + k0) ^ ((z+sum)>>>0) ^ ((z>>>5) + k1))) >>> 0;
-            z = (z + ((((y<<4)>>>0) + k2) ^ ((y+sum)>>>0) ^ ((y>>>5) + k3))) >>> 0;
-        }
-        return packN(y) + packN(z);
-    }
-    function teaDecryptECB(enc, key) {
-        var y = unpackN(enc,0), z = unpackN(enc,4);
-        var k0 = unpackN(key,0), k1 = unpackN(key,4), k2 = unpackN(key,8), k3 = unpackN(key,12);
-        var sum = (DELTA << LOG_ROUNDS) >>> 0;
-        for (var i = 0; i < ROUNDS; i++) {
-            z = (z - ((((y<<4)>>>0) + k2) ^ ((y+sum)>>>0) ^ ((y>>>5) + k3))) >>> 0;
-            y = (y - ((((z<<4)>>>0) + k0) ^ ((z+sum)>>>0) ^ ((z>>>5) + k1))) >>> 0;
-            sum = (sum - DELTA) >>> 0;
-        }
-        return packN(y) + packN(z);
-    }
-    function oiSymmetryEncrypt2(data, key) {
-        var nLen = data.length;
-        var padLen = (nLen + 1 + SALT_LEN + ZERO_LEN) % 8;
-        if (padLen) padLen = 8 - padLen;
-        var out = '';
-        var buf = new Array(8);
-        buf[0] = (Math.floor(Math.random()*256) & 0xF8) | padLen;
-        var si = 1;
-        while (padLen--) buf[si++] = Math.floor(Math.random()*256);
-        var ivp = new Array(8), ivc = new Array(8);
-        for (var j=0;j<8;j++){ivp[j]=0;ivc[j]=0;}
-
-        function flush() {
-            for (var j=0;j<8;j++) buf[j] ^= ivc[j];
-            var enc = teaEncryptECB(bytesToStr(buf), key);
-            var encB = strToBytes(enc);
-            for (var j=0;j<8;j++) encB[j] ^= ivp[j];
-            ivp = buf.slice();
-            ivc = encB.slice();
-            out += bytesToStr(encB);
-            si = 0;
-        }
-        var salt=0; while(salt<SALT_LEN){ if(si<8){buf[si++]=Math.floor(Math.random()*256);salt++;}if(si===8)flush(); }
-        var pos=0; while(pos<data.length){ if(si<8){buf[si++]=data.charCodeAt(pos++);}if(si===8)flush(); }
-        var zero=0; while(zero<ZERO_LEN){ if(si<8){buf[si++]=0;zero++;}if(si===8)flush(); }
-        if(si>0){ while(si<8)buf[si++]=0; flush(); }
+    function pkcs7Pad(data, blockSize) {
+        var padLen = blockSize - (data.length % blockSize);
+        var out = data.slice();
+        for (var i = 0; i < padLen; i++) out.push(padLen);
         return out;
     }
-    function oiSymmetryDecrypt2(data, key) {
-        if(data.length%8!==0||data.length<16) return false;
-        var dest = strToBytes(teaDecryptECB(data.substr(0,8), key));
-        var padLen = dest[0] & 7;
-        var plainLen = data.length - 1 - padLen - SALT_LEN - ZERO_LEN;
-        if(plainLen<0) return false;
-        var out = new Array(plainLen), outPos=0;
-        var ivp = new Array(8), ivc = strToBytes(data.substr(0,8));
-        var pos=8, di=1+padLen;
-        function next() {
-            ivp = ivc.slice();
-            ivc = strToBytes(data.substr(pos,8));
-            for(var j=0;j<8;j++){ if(pos+j>=data.length)return false; dest[j]^=ivc[j]; }
-            dest = strToBytes(teaDecryptECB(bytesToStr(dest), key));
-            pos+=8; di=0; return true;
+
+    // ======================== cKey 生成（AES 新版） ========================
+    function calcQn(str) {
+        var qn = 0;
+        for (var i = 0; i < str.length; i++) {
+            var code = str.charCodeAt(i);
+            qn = ((qn << 5) - qn + code) >>> 0;
         }
-        var salt=0; while(salt<SALT_LEN){if(di<8){di++;salt++;}else if(di===8){if(!next())return false;}}
-        while(outPos<plainLen){
-            if(di<8){ out[outPos++]=dest[di]^ivp[di]; di++; }
-            else if(di===8){ if(!next())return false; }
-        }
-        return bytesToStr(out);
-    }
-
-    // ======================== cKey 加解密 ========================
-    function encryptDataToCKey(data) {
-        var teaKey = hex2bin(TEA_CKEY);
-        var dataB = strToBytes(data);
-        var checksum = calcSignature(dataB);
-        var enc = oiSymmetryEncrypt2(data, teaKey);
-        enc += packN(checksum);
-        var xored = xorArray(strToBytes(enc));
-        var ckey = '--01' + customEncodeFromBytes(xored);
-        return ckey;
-    }
-
-    function buildPacket(params) {
-        var d = '';
-        d += hex2bin('0000004200000004000004d2');
-        d += packN(params.Platform);
-        d += packN(0);
-        d += packN(params.Timestamp);
-        d += packn(params.Sdtfrom.length) + params.Sdtfrom;
-        d += packn(params.randFlag.length) + params.randFlag;
-        d += packn(params.appVer.length) + params.appVer;
-        d += packn(params.vid.length) + params.vid;
-        d += packn(params.guid.length) + params.guid;
-        d += packN(1);
-        d += packN(0);
-        var uid='2622783A', bid='nil';
-        d += packn(uid.length)+uid;
-        d += packn(bid.length)+bid;
-        d += packn(params.uuid4.length)+params.uuid4;
-        d += packn(bid.length)+bid;
-        var ver='v0.1.000', pkg='com.cctv.yangshipin.app.iphone', plat='4330403';
-        d += packn(ver.length)+ver;
-        d += packn(pkg.length)+pkg;
-        d += packn(plat.length)+plat;
-        d += packn(11)+'ex_json_bus';
-        d += packn(10)+'ex_json_vs';
-        d += packn(params.ck_guard_time.length)+params.ck_guard_time;
-
-        var buf = packn(d.length) + d;
-        var sig = calcSignature(strToBytes(buf));
-        return buf.substr(0,18) + packN(sig) + buf.substr(22);
+        return qn >>> 0;
     }
 
     function generateCKey(cnlid, ts) {
-        if(!ts) ts = Math.floor(Date.now()/1000);
+        if (!ts) ts = Math.floor(Date.now() / 1000);
         var guid = generateGuid();
-        var params = {
-            Platform: 4330403,
-            Timestamp: ts,
-            Sdtfrom: 'dcgh',
-            vid: cnlid,
-            guid: guid,
-            appVer: 'V8.22.1035.3031',
-            randFlag: '_zj1A5Gh6QYcxWjIUGos2w==',
-            uuid4: '57eab0c4-2c58-44c6-8ae9-dd2757525dc5',
-            ck_guard_time: '1907CEBB43DD91205C0AA24CAA050DCE0EA64FEA1AB8F3D20C45B08B35952308456EE297396350DAA26DDC14'
-        };
-        var buf = buildPacket(params);
-        var ckey = encryptDataToCKey(buf);
-        return {ckey:ckey, guid:guid, params:params};
+        var appVer = '3.0.37';
+        var platform = '4330701';
+
+        var base = '|' + cnlid + '|' + ts + '|' + SR + '|' + appVer + '|' + guid + '|' + platform + '|' + NN + UA_SUFFIX;
+        var qn = calcQn(base);
+        var encryptStr = '|' + qn + base;
+
+        var keyBytes = strToBytes(hex2bin(AES_KEY_HEX));
+        var ivBytes = strToBytes(hex2bin(AES_IV_HEX));
+        var plainBytes = strToBytes(encryptStr);
+        var encBytes = aesCbcEncrypt(plainBytes, keyBytes, ivBytes);
+        var ckey = '--01' + bin2hex(bytesToStr(encBytes)).toUpperCase();
+
+        return { ckey: ckey, guid: guid, params: { Timestamp: ts } };
     }
 
     // ======================== 请求 ========================
@@ -318,12 +282,12 @@ function main(item) {
         var h264 = fr.map(function(f){return f+':'+h;}).join(',');
         var h265 = fr.map(function(f){return f+':'+h;}).join(',');
         var raw = 'H('+h264+'|'+h264+');2('+h265+'|'+h265+')';
-        return base64EncodeBytes(strToBytes(raw)); // 自定义字节级编码
+        return base64EncodeBytes(strToBytes(raw));
     }
 
     function makeLiveRequest(cnlid, livepid, defn, playseek) {
         var ck = generateCKey(cnlid);
-        var flowid = randomUUID().toUpperCase() + '_4330403';
+        var flowid = randomUUID().toUpperCase() + '_4330701';
         var isPB = !!playseek;
         var pbTs = null;
         if(isPB) {
@@ -334,11 +298,11 @@ function main(item) {
         }
 
         var base = {
-            atime:'120', livepid:livepid, cnlid:cnlid, appVer:'V8.22.1035.3031',
+            atime:'120', livepid:livepid, cnlid:cnlid, appVer:'3.0.37',
             app_version:'300090', caplv:'1', cmd:'2', defn:defn, device:'iPhone',
-            encryptVer:'4.2', getpreviewinfo:'0', hevclv:'33', lang:'zh-Hans_JP',
-            livequeue:'0', logintype:'1', nettype:'1', newnettype:'1', newplatform:'4330403',
-            platform:'4330403', sdtfrom:'v3021', spacode:'23', spaudio:'1', spdemuxer:'6',
+            encryptVer:'8.1', getpreviewinfo:'0', hevclv:'33', lang:'zh-Hans_JP',
+            livequeue:'0', logintype:'1', nettype:'1', newnettype:'1', newplatform:'4330701',
+            platform:'4330701', sdtfrom:'v3021', spacode:'23', spaudio:'1', spdemuxer:'6',
             spdrm:'2', spdynamicrange:'7', spflv:'1', spflvaudio:'1', sphdrfps:'60',
             sphttps:'0', spvcode: spvcode(defn), spvideo:'4', stream:'1', system:'1',
             sysver:'ios18.2.1', uhd_flag:'4', cKey:ck.ckey, guid:ck.guid,
@@ -393,11 +357,9 @@ function main(item) {
     }
 
     if(!isLive) {
-        // 回看直接返回播放地址
         return { url: playUrl, headers: {'User-Agent':'qqlive'} };
     }
 
-    // 直播：获取m3u8并补全ts路径
     var m3u8Res = ku9.request(playUrl, 'GET', {'User-Agent':'qqlive'}, null, true);
     if(!m3u8Res || m3u8Res.code!==200 || !m3u8Res.body) {
         return { url: '', msg: '获取M3U8失败' };
