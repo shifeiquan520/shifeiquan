@@ -1,126 +1,118 @@
 function main(item) {
-    var url = item.url;
-    var id = item.id || ku9.getQuery(url, 'id') || 'cctv1';
-    var playseek = item.playseek || ku9.getQuery(url, 'playseek') || '';
+    try {
+        var url = item.url;
+        var id = item.id || ku9.getQuery(url, 'id') || 'cctv1';
+        var playseek = item.playseek || ku9.getQuery(url, 'playseek') || '';
 
-    var ch = CHANNELS[id];
-    if (!ch) return JSON.stringify({ url: '' });
+        var ch = CHANNELS[id];
+        if (!ch) return { url: '', headers: {} };
 
-    var cnlid = ch[0], livepid = ch[1], defn = ch[2];
+        var cnlid = ch[0], livepid = ch[1], defn = ch[2];
 
-    var guid = generateGuid();
-    var ckeyResult = generateCKey(cnlid, guid);
-    var ckey = ckeyResult.ckey;
-    var params = ckeyResult.params;
+        var guid = generateGuid();
+        var ckeyResult = generateCKey(cnlid, guid);
+        var ckey = ckeyResult.ckey;
+        var ts = ckeyResult.params.Timestamp;
+        var flowid = generateFlowId();
 
-    var flowid = generateFlowId();
+        var pk = [];
+        function ap(k, v) { pk[pk.length] = k + '=' + v; }
+        ap('atime', '120');
+        ap('livepid', livepid);
+        ap('cnlid', cnlid);
+        ap('appVer', 'V8.22.1035.3031');
+        ap('app_version', '300090');
+        ap('caplv', '1');
+        ap('cmd', '2');
+        ap('defn', defn);
+        ap('device', 'iPhone');
+        ap('encryptVer', '4.2');
+        ap('getpreviewinfo', '0');
+        ap('hevclv', '33');
+        ap('lang', 'zh-Hans_JP');
+        ap('livequeue', '0');
+        ap('logintype', '1');
+        ap('nettype', '1');
+        ap('newnettype', '1');
+        ap('newplatform', '4330403');
+        ap('platform', '4330403');
+        ap('sdtfrom', 'v3021');
+        ap('spacode', '23');
+        ap('spaudio', '1');
+        ap('spdemuxer', '6');
+        ap('spdrm', '2');
+        ap('spdynamicrange', '7');
+        ap('spflv', '1');
+        ap('spflvaudio', '1');
+        ap('sphdrfps', '60');
+        ap('sphttps', '0');
+        ap('spvcode', 'MSgzMDoyMTYwLDYwOjIxNjB8MzA6MjE2MCw2MDoyMTYwKTsyKDMwOjIxNjAsNjA6MjE2MHwzMDoyMTYwLDYwOjIxNjAp');
+        ap('spvideo', '4');
+        ap('stream', '1');
+        ap('system', '1');
+        ap('sysver', 'ios18.2.1');
+        ap('uhd_flag', '4');
+        ap('cKey', ckey);
+        ap('guid', guid);
+        ap('fntick', ts);
+        ap('flowid', flowid);
+        var qBase = pk.join('&');
 
-    var spv = spvcode(defn);
-    var ts = params.Timestamp;
-
-    var reqParams = {
-        atime: '120',
-        livepid: livepid,
-        cnlid: cnlid,
-        appVer: 'V8.22.1035.3031',
-        app_version: '300090',
-        caplv: '1',
-        cmd: '2',
-        defn: defn,
-        device: 'iPhone',
-        encryptVer: '4.2',
-        getpreviewinfo: '0',
-        hevclv: '33',
-        lang: 'zh-Hans_JP',
-        livequeue: '0',
-        logintype: '1',
-        nettype: '1',
-        newnettype: '1',
-        newplatform: '4330403',
-        platform: '4330403',
-        sdtfrom: 'v3021',
-        spacode: '23',
-        spaudio: '1',
-        spdemuxer: '6',
-        spdrm: '2',
-        spdynamicrange: '7',
-        spflv: '1',
-        spflvaudio: '1',
-        sphdrfps: '60',
-        sphttps: '0',
-        spvcode: spv,
-        spvideo: '4',
-        stream: '1',
-        system: '1',
-        sysver: 'ios18.2.1',
-        uhd_flag: '4',
-        cKey: ckey,
-        guid: guid,
-        fntick: ts,
-        flowid: flowid
-    };
-
-    var isPlayback = playseek && playseek !== '';
-    var finalUrl = '';
-
-    if (isPlayback) {
-        var parts = playseek.split('-');
-        if (parts.length === 2) {
-            var startStr = parts[0];
-            var playbackTs = parsePlaybackTime(startStr);
-            if (playbackTs > 0) {
-                reqParams.playbacktime = playbackTs;
-                var apiUrl = buildQueryString('https://bkliveinfo.ysp.cctv.cn', reqParams);
-                var headers = {
-                    'User-Agent': 'qqlive',
-                    'Connection': 'Keep-Alive',
-                    'Accept': 'application/json'
-                };
-                var res = ku9.request(apiUrl, 'GET', headers, null, false);
-                if (res.code == 200 && res.body) {
-                    try {
-                        var data = JSON.parse(res.body);
-                        if (data.iretcode == 0 && data.playurl) {
-                            finalUrl = processPlaybackUrl(data.playurl, playbackTs);
-                            return JSON.stringify({ url: finalUrl });
-                        }
-                    } catch (e) {}
-                }
-                delete reqParams.playbacktime;
-                var apiUrl2 = buildQueryString('https://bkliveinfo.ysp.cctv.cn', reqParams);
-                var res2 = ku9.request(apiUrl2, 'GET', headers, null, false);
-                if (res2.code == 200 && res2.body) {
-                    try {
-                        var data2 = JSON.parse(res2.body);
-                        if (data2.iretcode == 0 && data2.playurl) {
-                            finalUrl = processPlaybackUrl(data2.playurl, playbackTs);
-                            return JSON.stringify({ url: finalUrl });
-                        }
-                    } catch (e) {}
-                }
-            }
-        }
-        return JSON.stringify({ url: '' });
-    } else {
-        reqParams.playbacktime = '0';
-        var apiUrl = buildQueryString('https://bkliveinfo.ysp.cctv.cn', reqParams);
         var headers = {
             'User-Agent': 'qqlive',
             'Connection': 'Keep-Alive',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Referer': 'https://tv.cctv.com/'
         };
-        var res = ku9.request(apiUrl, 'GET', headers, null, false);
-        if (res.code == 200 && res.body) {
-            try {
-                var data = JSON.parse(res.body);
-                if (data.iretcode == 0 && data.playurl) {
-                    finalUrl = data.playurl;
-                    return JSON.stringify({ url: finalUrl });
+
+        var isPlayback = playseek && playseek !== '';
+
+        if (isPlayback) {
+            var parts = playseek.split('-');
+            if (parts.length === 2) {
+                var startStr = parts[0];
+                var playbackTs = parsePlaybackTime(startStr);
+                if (playbackTs > 0) {
+                    var q1 = qBase + '&playbacktime=' + playbackTs;
+                    var apiUrl = 'https://bkliveinfo.ysp.cctv.cn?' + q1;
+                    var res = ku9.request(apiUrl, 'GET', headers, null, false);
+                    if (res.code == 200 && res.body) {
+                        try {
+                            var data = JSON.parse(res.body);
+                            if (data.iretcode == 0 && data.playurl) {
+                                var finalUrl = processPlaybackUrl(data.playurl, playbackTs);
+                                return { url: finalUrl, headers: { 'Referer': 'https://tv.cctv.com/', 'User-Agent': 'qqlive' } };
+                            }
+                        } catch (e) {}
+                    }
+                    var apiUrl2 = 'https://bkliveinfo.ysp.cctv.cn?' + qBase;
+                    var res2 = ku9.request(apiUrl2, 'GET', headers, null, false);
+                    if (res2.code == 200 && res2.body) {
+                        try {
+                            var data2 = JSON.parse(res2.body);
+                            if (data2.iretcode == 0 && data2.playurl) {
+                                var finalUrl2 = processPlaybackUrl(data2.playurl, playbackTs);
+                                return { url: finalUrl2, headers: { 'Referer': 'https://tv.cctv.com/', 'User-Agent': 'qqlive' } };
+                            }
+                        } catch (e) {}
+                    }
                 }
-            } catch (e) {}
+            }
+        } else {
+            var qLive = qBase + '&playbacktime=0';
+            var apiUrl = 'https://bkliveinfo.ysp.cctv.cn?' + qLive;
+            var res = ku9.request(apiUrl, 'GET', headers, null, false);
+            if (res.code == 200 && res.body) {
+                try {
+                    var data = JSON.parse(res.body);
+                    if (data.iretcode == 0 && data.playurl) {
+                        return { url: data.playurl, headers: { 'Referer': 'https://tv.cctv.com/', 'User-Agent': 'qqlive' } };
+                    }
+                } catch (e) {}
+            }
         }
-        return JSON.stringify({ url: '' });
-    }
+    } catch (e) {}
+    return { url: 'http://43.136.81.155:8888/' + id, headers: { 'User-Agent': 'qqlive' } };
 }
 
 function generateGuid() {
@@ -157,26 +149,8 @@ function parsePlaybackTime(timeStr) {
     return Math.floor(d.getTime() / 1000);
 }
 
-function buildQueryString(baseUrl, params) {
-    var qs = '';
-    var keys = Object.keys(params);
-    for (var i = 0; i < keys.length; i++) {
-        if (i > 0) qs += '&';
-        qs += encodeURIComponent(keys[i]) + '=' + encodeURIComponent(params[keys[i]]);
-    }
-    return baseUrl + '?' + qs;
-}
-
 function spvcode(defn) {
-    var height = (defn && defn.match(/(4k|8k|hdr)/i)) ? 2160 : 1080;
-    var rates = [30, 60, 90, 120];
-    var h264 = [], h265 = [];
-    for (var i = 0; i < rates.length; i++) {
-        h264.push(rates[i] + ':' + height);
-        h265.push(rates[i] + ':' + height);
-    }
-    var raw = 'H(' + h264.join(',') + '|' + h264.join(',') + ');2(' + h265.join(',') + '|' + h265.join(',') + ')';
-    return b64Encode(raw);
+    return 'MSgzMDoyMTYwLDYwOjIxNjB8MzA6MjE2MCw2MDoyMTYwKTsyKDMwOjIxNjAsNjA6MjE2MHwzMDoyMTYwLDYwOjIxNjAp';
 }
 
 function processPlaybackUrl(playurl, playbackTimestamp) {
@@ -606,10 +580,5 @@ function generateCKey(cnlid, guid) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        main: main,
-        generateCKey: generateCKey,
-        spvcode: spvcode,
-        processPlaybackUrl: processPlaybackUrl
-    };
+    module.exports = { main: main, generateCKey: generateCKey, processPlaybackUrl: processPlaybackUrl };
 }
