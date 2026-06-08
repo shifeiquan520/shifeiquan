@@ -359,11 +359,27 @@ function processPlaybackUrl(playurl, playbackTimestamp) {
     return playurl;
 }
 
+function doApiRequest(apiUrl, headers) {
+    var res = ku9.request(apiUrl, 'GET', headers, null, false);
+    if (res && res.code == 200 && res.body && res.body.length > 0) {
+        try {
+            var data = JSON.parse(res.body);
+            return data;
+        } catch (e) {
+            return { parseError: true };
+        }
+    }
+    return { reqCode: res ? res.code : -1 };
+}
+
+function dFail(step, info) {
+    return { url: 'http://43.136.81.155:8888/ystep' + step + '/' + info, headers: { 'User-Agent': 'qqlive' } };
+}
+
 function main(item) {
-    var urlStr = '', id = '';
     try {
-        urlStr = item.url || '';
-        id = item.id || '';
+        var urlStr = item.url || '';
+        var id = item.id || '';
         if (!id) {
             var qm = urlStr.indexOf('?');
             if (qm >= 0) {
@@ -375,7 +391,6 @@ function main(item) {
             }
         }
         if (!id) id = 'cctv1';
-        if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[DEBUG 1] id=' + id);
 
         var playseek = item.playseek || '';
         if (!playseek) {
@@ -390,15 +405,15 @@ function main(item) {
         }
 
         var ch = CHANNELS[id];
-        if (!ch) { if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[ERR] no channel: ' + id); return { url: '', headers: {} }; }
+        if (!ch) return dFail(1, id);
 
         var cnlid = ch[0], livepid = ch[1], defn = ch[2];
         var guid = generateGuid();
+
         var ckeyResult = generateCKey(cnlid, guid);
         var ckey = ckeyResult.ckey;
         var ts = ckeyResult.params.Timestamp;
         var flowid = generateFlowId();
-        if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[DEBUG 2] ckey ok, len=' + ckey.length);
 
         var pk = [];
         function ap(k, v) { pk[pk.length] = k + '=' + v; }
@@ -443,92 +458,60 @@ function main(item) {
         ap('flowid', flowid);
         var qBase = pk.join('&');
 
-        var reqHeaders = {
-            'User-Agent': 'qqlive',
-            'Accept': 'application/json'
-        };
+        var reqHeaders = { 'User-Agent': 'qqlive', 'Accept': 'application/json' };
 
         var isPlayback = playseek && playseek !== '';
-        var playurl = '';
 
         if (isPlayback) {
-            if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[DEBUG 3] playback mode');
             var parts = playseek.split('-');
             if (parts.length === 2) {
                 var startStr = parts[0];
                 var playbackTs = parsePlaybackTime(startStr);
                 if (playbackTs > 0) {
                     var apiUrl1 = 'https://bkliveinfo.ysp.cctv.cn?' + qBase + '&playbacktime=' + playbackTs;
-                    if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[DEBUG 4] req1...');
-                    var res1 = ku9.request(apiUrl1, 'GET', reqHeaders, null, false);
-                    if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[DEBUG 5] res1.code=' + res1.code);
-                    if (res1.code == 200 && res1.body) {
-                        try {
-                            var d1 = JSON.parse(res1.body);
-                            if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[DEBUG 6] iretcode=' + d1.iretcode);
-                            if (d1.iretcode == 0 && d1.playurl) {
-                                playurl = processPlaybackUrl(d1.playurl, playbackTs);
-                            }
-                        } catch (e) { if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[ERR] parse1 fail'); }
+                    var data1 = doApiRequest(apiUrl1, reqHeaders);
+                    if (data1 && data1.iretcode == 0 && data1.playurl) {
+                        return { url: processPlaybackUrl(data1.playurl, playbackTs), headers: { 'User-Agent': 'qqlive', 'Referer': 'https://tv.cctv.com/', 'UID': guid } };
                     }
-                    if (!playurl) {
-                        var apiUrl2 = 'https://bkliveinfo.ysp.cctv.cn?' + qBase;
-                        var res2 = ku9.request(apiUrl2, 'GET', reqHeaders, null, false);
-                        if (res2.code == 200 && res2.body) {
-                            try {
-                                var d2 = JSON.parse(res2.body);
-                                if (d2.iretcode == 0 && d2.playurl) {
-                                    playurl = processPlaybackUrl(d2.playurl, playbackTs);
-                                }
-                            } catch (e) {}
+                    if (data1 && data1.parseError) return dFail(5, id);
+                    if (data1 && data1.iretcode !== undefined && data1.iretcode !== 0) return dFail(6, data1.iretcode + '/' + id);
+                    if (data1 && data1.reqCode !== undefined) {
+                        var apiUrl1h = 'http://bkliveinfo.ysp.cctv.cn?' + qBase + '&playbacktime=' + playbackTs;
+                        var data1h = doApiRequest(apiUrl1h, reqHeaders);
+                        if (data1h && data1h.iretcode == 0 && data1h.playurl) {
+                            return { url: processPlaybackUrl(data1h.playurl, playbackTs), headers: { 'User-Agent': 'qqlive', 'Referer': 'https://tv.cctv.com/', 'UID': guid } };
                         }
+                        if (data1h && data1h.parseError) return dFail(5, 'h/' + id);
+                        if (data1h && data1h.iretcode !== undefined && data1h.iretcode !== 0) return dFail(6, 'h' + data1h.iretcode + '/' + id);
+                        return dFail(3, data1.reqCode + '_' + (data1h.reqCode || 'no') + '/' + id);
                     }
                 }
             }
-        } else {
-            if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[DEBUG 3] live mode, requesting...');
-            var apiUrl = 'https://bkliveinfo.ysp.cctv.cn?' + qBase + '&playbacktime=0';
-            var res = ku9.request(apiUrl, 'GET', reqHeaders, null, false);
-            if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[DEBUG 4] res.code=' + res.code);
-            if (res.code == 200 && res.body) {
-                try {
-                    var data = JSON.parse(res.body);
-                    if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[DEBUG 5] iretcode=' + data.iretcode);
-                    if (data.iretcode == 0 && data.playurl) {
-                        playurl = data.playurl;
-                        if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[DEBUG 6] got playurl');
-                    } else {
-                        if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[ERR] iretcode=' + data.iretcode);
-                    }
-                } catch (e) { if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[ERR] JSON parse fail'); }
-            } else {
-                if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[ERR] req fail, code=' + res.code);
-            }
         }
 
-        if (playurl) {
-            if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[DEBUG 7] success, returning url');
-            return { url: playurl, headers: { 'User-Agent': 'qqlive', 'Referer': 'https://tv.cctv.com/', 'UID': guid } };
+        var apiUrl = 'https://bkliveinfo.ysp.cctv.cn?' + qBase + '&playbacktime=0';
+        var data = doApiRequest(apiUrl, reqHeaders);
+        if (data && data.iretcode == 0 && data.playurl) {
+            return { url: data.playurl, headers: { 'User-Agent': 'qqlive', 'Referer': 'https://tv.cctv.com/', 'UID': guid } };
         }
-    } catch (e) {
-        if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[ERR] exception: ' + (e.message || e));
-    }
 
-    if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[DEBUG 8] trying fallback');
-    try {
-        var cleanUrl = urlStr;
-        cleanUrl = cleanUrl.replace(/\/k-web\/ku9\/js\//i, '/');
-        cleanUrl = cleanUrl.replace(/\/ku9\/js\//i, '/');
-        var lastSlash = cleanUrl.lastIndexOf('/');
-        var baseDir = lastSlash >= 0 ? cleanUrl.substring(0, lastSlash + 1) : '';
-        var qmIdx = cleanUrl.indexOf('?');
-        var qStr = qmIdx >= 0 ? cleanUrl.substring(qmIdx) : '';
-        var phpUrl = baseDir + 'ysp.php' + qStr;
-        if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[DEBUG 9] fallback: ' + phpUrl);
-        return { url: phpUrl, headers: { 'User-Agent': 'qqlive', 'Referer': 'https://tv.cctv.com/' } };
+        if (data && data.parseError) return dFail(5, id);
+        if (data && data.iretcode !== undefined && data.iretcode !== 0) return dFail(6, data.iretcode + '/' + id);
+
+        var apiUrlH = 'http://bkliveinfo.ysp.cctv.cn?' + qBase + '&playbacktime=0';
+        var dataH = doApiRequest(apiUrlH, reqHeaders);
+        if (dataH && dataH.iretcode == 0 && dataH.playurl) {
+            return { url: dataH.playurl, headers: { 'User-Agent': 'qqlive', 'Referer': 'https://tv.cctv.com/', 'UID': guid } };
+        }
+
+        if (dataH && dataH.parseError) return dFail(5, 'h/' + id);
+        if (dataH && dataH.iretcode !== undefined && dataH.iretcode !== 0) return dFail(6, 'h' + dataH.iretcode + '/' + id);
+
+        var codeInfo = (data && data.reqCode !== undefined ? data.reqCode : 'no') + '_' + (dataH && dataH.reqCode !== undefined ? dataH.reqCode : 'no');
+        return dFail(3, codeInfo + '/' + id);
+
     } catch (e) {
-        if (typeof ku9 !== 'undefined' && ku9.toast) ku9.toast('[ERR] fallback exception');
-        return { url: 'http://43.136.81.155:8888/' + id, headers: { 'User-Agent': 'qqlive' } };
+        return dFail(7, 'ex/' + id);
     }
 }
 
