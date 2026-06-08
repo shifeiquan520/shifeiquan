@@ -112,25 +112,25 @@ var STD_ALPH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
 var CUS_ALPH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-=';
 
 function customEncode(text) {
-    var encoded = btoa(text);
+    var bytes = strToBytes(text);
+    var b64 = '';
+    for (var i = 0; i < bytes.length; i += 3) {
+        var a = bytes[i];
+        var b = i + 1 < bytes.length ? bytes[i + 1] : 0;
+        var c = i + 2 < bytes.length ? bytes[i + 2] : 0;
+        var triple = (a << 16) | (b << 8) | c;
+        b64 += STD_ALPH.charAt((triple >> 18) & 63);
+        b64 += STD_ALPH.charAt((triple >> 12) & 63);
+        b64 += i + 1 < bytes.length ? STD_ALPH.charAt((triple >> 6) & 63) : '=';
+        b64 += i + 2 < bytes.length ? STD_ALPH.charAt(triple & 63) : '=';
+    }
     var result = '';
-    for (var i = 0; i < encoded.length; i++) {
-        var idx = STD_ALPH.indexOf(encoded[i]);
-        result += (idx >= 0) ? CUS_ALPH[idx] : encoded[i];
+    for (var i = 0; i < b64.length; i++) {
+        var idx = STD_ALPH.indexOf(b64[i]);
+        result += (idx >= 0) ? CUS_ALPH[idx] : b64[i];
     }
     while (result.charAt(result.length - 1) === '=') result = result.substring(0, result.length - 1);
     return result;
-}
-
-function customDecode(text) {
-    var normalized = '';
-    var pad = 4 - (text.length % 4);
-    if (pad < 4) { for (var i = 0; i < pad; i++) normalized += '='; }
-    for (var i = 0; i < text.length; i++) {
-        var idx = CUS_ALPH.indexOf(text[i]);
-        normalized += (idx >= 0) ? STD_ALPH[idx] : text[i];
-    }
-    return atob(normalized);
 }
 
 var XOR_KEY = [0x84, 0x2E, 0xED, 0x08, 0xF0, 0x66, 0xE6, 0xEA, 0x48, 0xB4, 0xCA, 0xA9, 0x91, 0xED, 0x6F, 0xF3];
