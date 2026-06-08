@@ -1,7 +1,7 @@
-CCTV-1 综合,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/ysp.js?id=cctv1
-CCTV-2 财经,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/ysp.js?id=cctv2
-CCTV-3 综艺,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/ysp.js?id=cctv3
-CCTV-4 中文国际,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/ysp.js?id=cctv4
+CCTV-1 综合,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/ysp.js?id=cctv1&_=123456
+CCTV-2 财经,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/ysp.js?id=cctv2&_=123456
+CCTV-3 综艺,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/ysp.js?id=cctv3&_=123456
+CCTV-4 中文国际,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/ysp.js?id=cctv4&_=123456
 CCTV-5 体育,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/ysp.js?id=cctv5
 CCTV-5+ 体育赛事,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/ysp.js?id=cctv5p
 CCTV-6 电影,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/ysp.js?id=cctv6
