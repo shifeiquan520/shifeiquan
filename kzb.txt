@@ -1,6 +1,6 @@
 
 央视频道,#genre#
-CCTV1综合,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js?id=578
+CCTV1综合,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js?id=608807420
 CCTV2财经,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js?id=579
 CCTV3综艺,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js?id=580
 CCTV4中文国际,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js?id=581
