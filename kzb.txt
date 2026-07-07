@@ -1,12 +1,12 @@
 
 央视频道,#genre#
-CCTV1 综合,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js??id=cctv1&fmt=flv
-CCTV2 财经,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js??id=cctv2&fmt=flv
-CCTV3 综艺,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js??id=cctv3&fmt=flv
-CCTV4 中文国际,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js??id=cctv4&fmt=flv
-CCTV5 体育,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js??id=cctv5&fmt=flv
-CCTV5+ 体育赛事,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js??id=cctv5p&fmt=flv
-CCTV6 电影,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js??id=cctv6&fmt=flv
+CCTV1综合,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js?id=578
+CCTV2财经,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js?id=579
+CCTV3综艺,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js?id=580
+CCTV4中文国际,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js?id=581
+CCTV5体育,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js?id=582
+CCTV5+体育赛事,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js?id=583
+CCTV6电影,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js?id=584
 CCTV7 国防军事,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js??id=cctv7&fmt=flv
 CCTV8 电视剧,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js??id=cctv8&fmt=flv
 CCTV9 记录,https://gh.xxooo.cf/https://raw.githubusercontent.com/k-web/ku9/js/shifeiquan520/shifeiquan/refs/heads/main/ku9/kzb.js??id=cctv9&fmt=flv
