@@ -129,6 +129,8 @@
       "ext": "https://vip.wwgz.cn:5200"
       
      ,"jar": "./jar/xs.jar" },
+{"key":"映像星球","name":"映像星球","type":1,"api":"https://www.yxxq41.cc/api.php/provide/vod/","searchable":1,"changeable":1,  
+ "ext": "./lib/映像星球.json" },
 
 {
       "key": "漫国动漫",
@@ -181,8 +183,6 @@
 
 
 
-{"key":"映像星球","name":"映像星球","type":1,"api":"https://www.yxxq41.cc/api.php/provide/vod/","searchable":1,"changeable":1,  
- "ext": "./lib/映像星球.json" },
 
 
 
