@@ -132,13 +132,6 @@
 {"key":"映像星球","name":"映像星球","type":1,"api":"https://www.yxxq41.cc/api.php/provide/vod/","searchable":1,"changeable":1,  
  "ext": "./lib/映像星球.json" },
 
-{"key":"枫叶影视","name":"枫叶影视","type":1,"api":"https://maihaolian.com/cupfox-list/","searchable":1,"changeable":1,  
- "ext": "./lib/枫叶影视.json" },
-
-{"key":"万彩坊影视","name":"万彩坊影视","type":1,"api":"hhttps://www.wancaifang.com/index.php/vod/","searchable":1,"changeable":1,  
- "ext": "./lib/万彩坊影视.json" },
-
-
 
 
 	  
