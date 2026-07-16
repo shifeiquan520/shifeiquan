@@ -129,8 +129,8 @@
       "ext": "https://vip.wwgz.cn:5200"
       
      ,"jar": "./jar/xs.jar" },
-{"key":"映像星球","name":"映像星球","type":1,"api":"https://www.yxxq42.cc/api.php/provide/vod/","searchable":1,"changeable":1,  
- "ext": "./lib/映像星球.json" },
+{"key":"映像星球","name":"映像星球","type":1,"api":"https://www.yxxq42.cc/api.php/provide/vod/","searchable":1,"changeable":1 
+ },
 
 
 
