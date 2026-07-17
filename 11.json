@@ -131,17 +131,7 @@
      ,"jar": "./jar/xs.jar" },
 
 
-  {
-			"key": "小苹果",
-			"name": "小苹果",
-			"type": 4,
-			"api": "http://zhangqun19.serv00.net/pingguo.php",
-			"style": {
-				"type": "rect",
-				"ratio": 1.33
-			},
-			"changeable": 1
-		},
+ 
 {"key":"映像星球","name":"映像星球","type":1,"api":"https://www.yxxq42.cc/api.php/provide/vod/","searchable":1,"changeable":1 , "ext": "./lib/映像星球.json"
  },
 
