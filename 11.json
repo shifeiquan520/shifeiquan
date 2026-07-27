@@ -192,18 +192,11 @@
 	  
 
 {
-      "key": "漫国动漫",
-      "name": "漫国丨动漫",
-      "type": 3,
-      "searchable": 1,
-      "api": "csp_AppSy",
-      "ext": {
-        "site": "https://dm-1255775577.cos.ap-guangzhou.myqcloud.com/dmg/api.txt",
-        "siteKey": "rectangleadsadxa",
-        "listKey": "aassddwwxxllsx1x",
-        "parsesKey": "aassddwwxxllsx1x"
-      }
-     ,"jar": "./jar/xs.jar" },
+  "key": "千千影视",
+  "name": "千千影视",
+  "type": 1,
+  "api": "千千影视.js"
+}
 
 
 
