@@ -187,6 +187,12 @@
 {"key":"映像星球","name":"映像星球","type":1,"api":"https://www.yxxq42.cc/api.php/provide/vod/","searchable":1,"changeable":1 , "ext": "./lib/映像星球.json"
  },
 
+{
+  "key": "千千影视",
+  "name": "千千影视",
+  "type": 1,
+  "api": "./lib/千千影视.js"
+},
 
 
 	  
