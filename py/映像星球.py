@@ -38,7 +38,7 @@ class Spider(BaseSpider):
             return False
 
     def _ensure_host(self):
-        if self.host and self._check(self.host):
+        if self.host:
             return
         cached = self._load_host()
         if cached and self._check(cached):
