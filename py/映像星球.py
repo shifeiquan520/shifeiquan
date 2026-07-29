@@ -44,8 +44,18 @@ class Spider(BaseSpider):
         if cached and self._check(cached):
             self.host = cached
             return
+        if self._check("www.qkys2.cc"):
+            self.host = "www.qkys2.cc"
+            self._save_host("www.qkys2.cc")
+            return
         for i in range(1, 101):
             host = f"www.yxxq{i}.cc"
+            if self._check(host):
+                self.host = host
+                self._save_host(host)
+                return
+        for i in range(1, 101):
+            host = f"www.qkys{i}.cc"
             if self._check(host):
                 self.host = host
                 self._save_host(host)
@@ -74,33 +84,18 @@ class Spider(BaseSpider):
             it.setdefault("vod_name", "")
         return items
 
-    def _fill_pics(self, items):
-        ids = [it["vod_id"] for it in items if it.get("vod_id")]
-        if not ids:
-            return items
-        html = self._get(f"https://{self.host}/api.php/provide/vod/at/json/?ac=detail&ids={','.join(ids)}&pagesize=50")
-        data = json.loads(html)
-        pic_map = {str(it["vod_id"]): it.get("vod_pic", "") for it in data.get("list", []) if it.get("vod_id")}
-        for it in items:
-            pic = pic_map.get(it["vod_id"])
-            if pic:
-                it["vod_pic"] = pic
-        return items
-
     def homeVideoContent(self):
         self._ensure_host()
-        html = self._get(f"https://{self.host}/api.php/provide/vod/at/json/?ac=list&t=1&pg=1&pagesize=36")
+        html = self._get(f"https://{self.host}/api.php/provide/vod/at/json/?ac=videolist&t=1&pg=1&pagesize=36")
         data = json.loads(html)
         items = self._norm(data.get("list", []))
-        self._fill_pics(items)
         return {"list": items}
 
     def categoryContent(self, tid, pg, filter, extend):
         self._ensure_host()
-        html = self._get(f"https://{self.host}/api.php/provide/vod/at/json/?ac=list&t={tid}&pg={pg}&pagesize=50")
+        html = self._get(f"https://{self.host}/api.php/provide/vod/at/json/?ac=videolist&t={tid}&pg={pg}&pagesize=50")
         data = json.loads(html)
         items = self._norm(data.get("list", []))
-        self._fill_pics(items)
         pagecount = data.get("pagecount", 1)
         return {"list": items, "page": int(pg), "pagecount": pagecount, "limit": 50, "total": data.get("total", 0)}
 
@@ -126,10 +121,9 @@ class Spider(BaseSpider):
 
     def searchContent(self, key, quick, pg="1"):
         self._ensure_host()
-        html = self._get(f"https://{self.host}/api.php/provide/vod/at/json/?ac=list&wd={key}&pg={pg}&pagesize=50")
+        html = self._get(f"https://{self.host}/api.php/provide/vod/at/json/?ac=videolist&wd={key}&pg={pg}&pagesize=50")
         data = json.loads(html)
         items = self._norm(data.get("list", []))
-        self._fill_pics(items)
         return {"list": items, "page": int(pg), "pagecount": 1, "limit": 50, "total": data.get("total", 0)}
 
     def playerContent(self, flag, id, vipFlags):
