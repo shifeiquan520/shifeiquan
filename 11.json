@@ -184,7 +184,7 @@
 
 
  
-{"key": "qqvm","name": "千千影视","type": 3,"api": "./py/千千影视.py","searchable": 1, "changeable": 1, "quickSearch": 1, "filterable": 1 },
+
 { "key": "py_枫叶", "name": "枫叶APP","type": 3, "api": "./py/枫叶.py", "searchable": 1, "changeable": 1,"quickSearch": 1, "filterable": 1, "playerType": 2 },
 {"key":"映像星球","name":"映像星球","type":3,"api":"./py/映像星球.py","searchable":1,"changeable":1 },
 
