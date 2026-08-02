@@ -137,12 +137,6 @@ http://ott.fj.chinamobile.com/PLTV/88888888/224/3221227194/index.m3u8
 http://ott.fj.chinamobile.com/PLTV/88888888/224/3221227198/index.m3u8
 #EXTINF:-1 tvg-id="福建教育" tvg-name="福建教育" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/福建教育.png" group-title="福建",福建教育
 http://ott.fj.chinamobile.com/PLTV/88888888/224/3221227202/index.m3u8
-#EXTINF:-1 tvg-id="厦门一" tvg-name="厦门一" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/厦门一.png" group-title="福建",厦门一
-http://ott.fj.chinamobile.com/PLTV/88888888/224/3221226814/index.m3u8
-#EXTINF:-1 tvg-id="厦门二" tvg-name="厦门二" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/厦门二.png" group-title="福建",厦门二
-http://ott.fj.chinamobile.com/PLTV/88888888/224/3221226777/index.m3u8
-#EXTINF:-1 tvg-id="厦门三" tvg-name="厦门三" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/厦门三.png" group-title="福建",厦门三
-http://ott.fj.chinamobile.com/PLTV/88888888/224/3221226760/index.m3u8
 #EXTINF:-1 tvg-id="CCTV4K" tvg-name="CCTV4K" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/CCTV4K.png" group-title="4K频道",CCTV4K
 http://ott.fj.chinamobile.com/PLTV/88888888/224/3221227510/index.m3u8
 #EXTINF:-1 tvg-id="哒啵电竞" tvg-name="哒啵电竞" tvg-logo="https://raw.githubusercontent.com/fanmingming/live/main/tv/哒啵电竞.png" group-title="NewTV",哒啵电竞
