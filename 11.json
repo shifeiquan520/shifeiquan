@@ -26,51 +26,54 @@
 
 
 
-
-
- 
-
-  "sites": [
-
-
-
-
+ "sites": [
  {
-      "name": "🎉歌曲┃Bili",
-      "key": "BiliGequ",
+      "key": "️演唱",
+      "name": "哔演唱会",
       "type": 3,
-      "api": "csp_BiliAmns",
+      "api": "csp_Bili",
       "searchable": 0,
       "quickSearch": 0,
-      "changeable": 0,
+      "filterable": 0,
       "ext": {
-        "json": "./lib/演唱会.json",
-        "cookie": ""
+        "cookie": "http://127.0.0.1:9978/file/TVBox/bili_cookie.txt",
+        "json": "./lib/演唱会.json"
       },
       "style": {
         "type": "rect",
-        "ratio": 1.433
+        "ratio": 1.597
+      }
+    },   
+  {
+      "key": "歌曲",
+      "name": "明星MV",
+      "type": 3,
+      "api": "csp_Bili",
+      "searchable": 0,
+      "quickSearch": 0,
+      "filterable": 0,
+      "ext": {
+        "cookie": "http://127.0.0.1:9978/file/TVBox/bili_cookie.txt",
+        "json": "./lib/歌曲MV.json"
       },
- "jar": "./jar/bc.jar" },
-
-    
-   
-
-
+      "style": {
+        "type": "rect",
+        "ratio": 1.597
+      }
+    }, 
 {"key":"豆瓣2","name":"豆瓣推荐","type":3,"api":"csp_Douban","searchable":0 },
-
-
- {
+{
       "key": "DRJS_虎牙",
       "name": "虎牙直播(JS)",
       "type": 3,
-      "api": "./js/lib/drpy2.min.js",
-      "ext": "./lib/虎牙直播.js",
+      "api": "https://gh-proxy.com/https://raw.githubusercontent.com/shifeiquan520/shifeiquan/refs/heads/main/js/lib/drpy2.min.js",
+      "ext": "https://gh-proxy.com/https://raw.githubusercontent.com/shifeiquan520/shifeiquan/refs/heads/main/lib/%E8%99%8E%E7%89%99%E7%9B%B4%E6%92%AD.js",
       "searchable": 0,
       "quickSearch": 0,
       "filterable": 1
     },
-    {
+
+{
       "key": "csp_XYQHiker_虎牙直播",
       "name": "虎牙直播(XYQH)",
       "type": 3,
@@ -79,8 +82,7 @@
       "quickSearch": 0,
       "filterable": 1,
       "ext": "./lib/虎牙直播.json","jar": "./jar/xyq.jar" },
-
- {
+   {
       "key": "csp_XYQHiker_斗鱼直播",
       "name": "斗鱼直播(XYQH)",
       "type": 3,
@@ -89,9 +91,9 @@
       "quickSearch": 0,
       "filterable": 1,
       "ext": "./lib/斗鱼直播.json","jar": "./jar/xyq.jar" },
-  
 
-  {
+
+ {
       "key": "csp_JianPian",
       "name": "荐片｜APP",
       "type": 3,
@@ -102,29 +104,26 @@
       "filterable": 1
    ,"jar": "./jar/xyq.jar" },
 
-
  {
       "key": "热播影视",
-      "name": "热播｜APP",
+      "name": "热播｜影视",
       "type": 3,
       "api": "csp_AppRJ",
       "searchable": 1,
       "quickSearch": 1,
-      "filterable": 1,
+      "filterable": 0,
       "ext": {
         "url": "http://v.rbotv.cn"
       }
-    ,"jar": "./jar/xs.jar" },
-
-   
-   {
+    }, 
+{
       "key": "农民影视",
       "name": "农民｜影视",
       "type": 3,
       "api": "csp_Wwys",
       "ext": "https://vip.wwgz.cn:5200"
-      
-     ,"jar": "./jar/xs.jar" },
+    },
+
 
 	  {
       "name": "菠菜专线1",
@@ -181,27 +180,16 @@
 
 
 
-   {
+  {
       "key": "1905",
       "name": "1905｜影视",
       "type": 3,
       "api": "csp_Web1905",
       "searchable": 1,
-      "quickSearch": 1,
-      "filterable": 1
-   ,"jar": "./jar/ou2.jar" },  
-
-{
-      "key": "移动",
-      "name": "移动｜影视",
-      "type": 3,
-      "api": "csp_YDjisu",
-      "searchable": 1,
-      "quickSearch": 1
-    ,"jar": "./jar/ou2.jar" },     
-
-
-{
+      "quickSearch": 0,
+      "filterable": 0
+    }, 
+     {
       "key": "七味",
       "name": "七味｜磁力",
       "type": 3,
@@ -214,26 +202,56 @@
       }
     ,"jar": "./jar/xs.jar" },
 
-	  
-{
-      "name": "📚小学┃教育",
-      "key": "BiliXxue",
+
+
+ {
+      "key": "移动",
+      "name": "移动｜影视",
       "type": 3,
-      "api": "csp_BiliAmns",
+      "api": "csp_Yidong4K",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 1,
+      "timeout": 60
+    },  
+
+ 
+{"key": "360_spider","name": "360影视", "type": 3, "api": "csp_SP360", "filterable": 1,"quickSearch": 1,"searchable": 1 },
+
+ {
+      "key": "️小学",
+      "name": "📚小学┃课堂",
+      "type": 3,
+      "api": "csp_Bili",
       "searchable": 0,
       "quickSearch": 0,
-      "changeable": 0,
+      "filterable": 0,
       "ext": {
-        "json": "./lib/演唱会.json",
-        "cookie": ""
+        "cookie": "http://127.0.0.1:9978/file/TVBox/bili_cookie.txt",
+        "json": "./lib/小学课堂.json"
       },
       "style": {
         "type": "rect",
-        "ratio": 1.433
+        "ratio": 1.597
+      }
+    },
+    {
+      "key": "️初中",
+      "name": "📚初中┃课堂",
+      "type": 3,
+      "api": "csp_Bili",
+      "searchable": 0,
+      "quickSearch": 0,
+      "filterable": 0,
+      "ext": {
+        "cookie": "http://127.0.0.1:9978/file/TVBox/bili_cookie.txt",
+        "json": "./lib/初中课堂.json"
       },
-	  
-"jar": "./jar/bc.jar" },
-
+      "style": {
+        "type": "rect",
+        "ratio": 1.597
+      }
+    },
 
 
 
