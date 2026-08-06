@@ -228,7 +228,7 @@
       "quickSearch": 0,
       "changeable": 0,
       "ext": {
-        "json": "https://nos.netease.com/youdata-netease/public-utilUpload-4VMpA5z1erwuRYyDVSkc9T.gz",
+        "json": "./lib/演唱会.json",
         "cookie": ""
       },
       "style": {
