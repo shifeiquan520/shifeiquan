@@ -219,15 +219,7 @@
     ,"jar": "./jar/xs.jar" },
 
 
-
-
-
-
-
-
-
-
-  {
+ {
       "name": "📚小学┃教育",
       "key": "BiliXxue",
       "type": 3,
@@ -235,7 +227,8 @@
       "searchable": 0,
       "quickSearch": 0,
       "changeable": 0,
-      "ext": "./lib/小学课堂.json" ,"cookie": ""
+        "ext": {
+        "json":./lib/小学课堂.json" ,"cookie": ""
       },
       "style": {"type": "rect", "ratio": 1.433  },
 
