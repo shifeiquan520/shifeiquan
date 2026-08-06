@@ -219,24 +219,6 @@
     ,"jar": "./jar/xs.jar" },
 
 
-{
-      "name": "📚小学┃教育",
-      "key": "BiliXxue",
-      "type": 3,
-      "api": "csp_BiliAmns",
-      "searchable": 0,
-      "quickSearch": 0,
-      "changeable": 0,
-      "ext": {
-        "json": "https://nos.netease.com/youdata-netease/public-utilUpload-4VMpA5z1erwuRYyDVSkc9T.gz",
-        "cookie": ""
-      },
-      "style": {
-        "type": "rect",
-        "ratio": 1.433
-      },
-"jar": "./jar/bc.jar" },
-
 
     
 {"key":"量子资源","name":"🎀量子┃采集","type":1,"api":"https://cj.lziapi.com/api.php/provide/vod/","searchable":1,"changeable":1,  "categories": [
