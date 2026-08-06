@@ -33,29 +33,25 @@
   "sites": [
 
 
-{ "key": "哔演唱会",
-      "name": "哔演唱会",
+
+
+ {
+      "name": "🎉歌曲┃Bili",
+      "key": "BiliGequ",
       "type": 3,
-      "api": "csp_Bili",
+      "api": "csp_BiliAmns",
       "searchable": 0,
       "quickSearch": 0,
-      "filterable": 1,
       "changeable": 0,
-      "ext": "./lib/演唱会.json" },
-   
- {
-      "key": "MTV",
-      "name": "明星┃MV",
-      "type": 3,
-      "api": "csp_Bili",
+      "ext": {
+        "json": "./lib/演唱会.json",
+        "cookie": ""
+      },
       "style": {
         "type": "rect",
-        "ratio": 1.597
+        "ratio": 1.433
       },
-      "searchable": 1,
-      "quickSearch": 1,
-      "changeable": 1,
-      "ext": "./lib/歌曲MV.json"},
+ "jar": "./jar/bc.jar" },
 
     
    
