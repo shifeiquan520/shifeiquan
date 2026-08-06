@@ -227,21 +227,19 @@
 
 
 
- {
-      "key": "小学课堂",
-      "name": "📚小学┃课堂",
+  {
+      "name": "📚小学┃教育",
+      "key": "BiliXxue",
       "type": 3,
-      "api": "csp_Bili",
-      "style": {
-        "type": "rect",
-        "ratio": 1.597
-      },
+      "api": "csp_BiliAmns",
       "searchable": 0,
       "quickSearch": 0,
       "changeable": 0,
-      "ext": "./lib/小学课堂.json" },
-    
+      "ext": "./lib/小学课堂.json" ,"cookie": ""
+      },
+      "style": {"type": "rect", "ratio": 1.433  },
 
+ "jar": "./jar/bc.jar" },
 
 
     
