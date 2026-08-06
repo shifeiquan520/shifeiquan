@@ -219,7 +219,7 @@
     ,"jar": "./jar/xs.jar" },
 
 
- {
+{
       "name": "📚小学┃教育",
       "key": "BiliXxue",
       "type": 3,
@@ -227,12 +227,15 @@
       "searchable": 0,
       "quickSearch": 0,
       "changeable": 0,
-        "ext": {
-        "json":./lib/小学课堂.json" ,"cookie": ""
+      "ext": {
+        "json": "https://nos.netease.com/youdata-netease/public-utilUpload-4VMpA5z1erwuRYyDVSkc9T.gz",
+        "cookie": ""
       },
-      "style": {"type": "rect", "ratio": 1.433  },
-
- "jar": "./jar/bc.jar" },
+      "style": {
+        "type": "rect",
+        "ratio": 1.433
+      },
+"jar": "./jar/bc.jar" },
 
 
     
