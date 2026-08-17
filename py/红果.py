@@ -274,18 +274,44 @@ class Spider(Spider):
         if cached and time.time() - cached[0] < 300:
             return cached[1]
 
-        response = requests.get(url, headers=self.headers, timeout=self.timeout)
+        response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=False)
         response.raise_for_status()
         response.encoding = "utf-8"
-        match = re.search(
-            r"window\._ROUTER_DATA\s*=\s*(\{.*?\})\s*</script>",
-            response.text,
-            re.S,
-        )
-        if not match:
-            return {}
 
-        data = json.loads(match.group(1))
+        # 站点现在用 _ROUTER_DATA = {...}; 而非 window._ROUTER_DATA
+        # 需要匹配平衡的大括号，避免贪婪/非贪婪截断
+        text = response.text
+        m = re.search(r"_ROUTER_DATA\s*=\s*", text)
+        if not m:
+            return {}
+        start = m.end()
+        brace_count = 0
+        in_string = False
+        escape = False
+        end = start
+        for i, ch in enumerate(text[start:], start):
+            if escape:
+                escape = False
+                continue
+            if ch == "\\":
+                escape = True
+                continue
+            if ch == '"' and not escape:
+                in_string = not in_string
+                continue
+            if not in_string:
+                if ch == "{":
+                    brace_count += 1
+                elif ch == "}":
+                    brace_count -= 1
+                    if brace_count == 0:
+                        end = i + 1
+                        break
+        json_str = text[start:end]
+        try:
+            data = json.loads(json_str)
+        except json.JSONDecodeError:
+            return {}
         self._cache[url] = (time.time(), data)
         return data
 
