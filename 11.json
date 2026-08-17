@@ -91,17 +91,19 @@
       "quickSearch": 0,
       "filterable": 1,
       "ext": "./lib/斗鱼直播.json","jar": "./jar/xyq.jar" },
- {
-      "name": "短剧┃推荐",
-      "key": "Hgdh",
+{
+      "key": "红果短剧",
+      "name": "红果短剧",
       "type": 3,
-      "api": "csp_HgdhAmns",
+      "api": "./py/红果.py",
       "searchable": 1,
       "quickSearch": 1,
-      "changeable": 0,
-      "genre": "shortdrama",
-      "ext": "https://nos.netease.com/ysf/dac0101040005285380ee886e6e6c660.aowu",
-    "jar": "./jar/bc.jar" },
+      "filterable": 1,
+      "timeout": 60
+    },  
+
+
+
  {
       "key": "csp_JianPian",
       "name": "荐片｜APP",
