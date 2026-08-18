@@ -9,7 +9,7 @@
  {
       "name": "live",
       "type": 0,
-      "url": "https://gh.clun.top/https://raw.githubusercontent.com/cluntop/tvbox/refs/heads/main/lib/iptv.txt",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/shifeiquan520/shifeiquan2/main/ku9.txt",
       "playerType": 1,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
       "logo": "https://live.fanmingming.com/tv/{name}.png"
