@@ -96,13 +96,13 @@ class Spider(Spider):
             page = self._pick_page(data, "page")
             videos = page.get("videoList") or []
             if not videos:
-                videos = self._category_items({"sort_type": "1"})
+                videos, _ = self._category_items({"sort_type": "1"})
             return {"list": self._vod_list(videos[:self.page_size])}
         except Exception as exc:
             print("红果首页读取失败:", exc)
             return {"list": []}
 
-def categoryContent(self, tid, pg, filter, extend):
+    def categoryContent(self, tid, pg, filter, extend):
         page_num = self._safe_int(pg, 1)
         try:
             if str(tid) == "home":
@@ -225,7 +225,12 @@ def categoryContent(self, tid, pg, filter, extend):
         return self.searchContent(key, quick, pg)
 
     def playerContent(self, flag, pid, vipFlags):
-        sid, vid = self._split_play_id(pid)
+        # 处理 "第X集$series_id|vid" 格式
+        play_id = str(pid or "")
+        if '$' in play_id:
+            play_id = play_id.split('$', 1)[1]
+
+        sid, vid = self._split_play_id(play_id)
         if not sid:
             return {"parse": 1, "playUrl": "", "url": str(pid or "")}
 
