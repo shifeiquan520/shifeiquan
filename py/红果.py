@@ -102,7 +102,7 @@ class Spider(Spider):
             print("红果首页读取失败:", exc)
             return {"list": []}
 
-    def categoryContent(self, tid, pg, filter, extend):
+def categoryContent(self, tid, pg, filter, extend):
         page_num = self._safe_int(pg, 1)
         try:
             if str(tid) == "home":
@@ -110,20 +110,19 @@ class Spider(Spider):
                 page = self._pick_page(data, "page")
                 videos = page.get("videoList") or []
                 if not videos:
-                    videos = self._category_items({"sort_type": "1"})
+                    videos, api_pagecount = self._category_items({"sort_type": "1"}, page_num)
             else:
                 query = self._category_query(tid, extend or {})
-                videos = self._category_items(query)
+                videos, api_pagecount = self._category_items(query, page_num)
 
-            total = len(videos)
-            start = (page_num - 1) * self.page_size
-            end = start + self.page_size
+            # 直接使用 API 返回的当前页数据，不再本地切片
+            pagecount = api_pagecount if api_pagecount > 0 else 1
             return {
                 "page": page_num,
-                "pagecount": max(1, int(math.ceil(total / float(self.page_size)))) if total else 1,
+                "pagecount": pagecount,
                 "limit": self.page_size,
-                "total": total,
-                "list": self._vod_list(videos[start:end]),
+                "total": len(videos),
+                "list": self._vod_list(videos),
             }
         except Exception as exc:
             print("红果分类读取失败:", exc)
@@ -387,22 +386,30 @@ class Spider(Spider):
             query["sort_type"] = "1"
         return query
 
-    def _category_items(self, query):
+    def _category_items(self, query, page=1):
         if isinstance(query, dict):
+            q = dict(query)
+            q["pg"] = str(page)
             url = self.host + "/category"
-            if query:
-                url += "?" + urlencode(query)
+            if q:
+                url += "?" + urlencode(q)
         else:
             text = str(query or "")
             url = self.host + "/category" + (("?" + text) if text else "")
+            if "pg=" not in url:
+                url += ("&" if "?" in url else "?") + "pg=" + str(page)
 
         data = self._router_data(url) or {}
-        page = self._pick_page(data, "category_page")
-        items = page.get("recommendList") or []
+        page_data = self._pick_page(data, "category_page")
+        items = page_data.get("recommendList") or []
         if not items:
-            category_data = page.get("categoryData") or {}
+            category_data = page_data.get("categoryData") or {}
             if isinstance(category_data, dict):
                 items = category_data.get("recommendList") or []
+
+        # 从 pagination 获取总页数
+        pagination = page_data.get("pagination", {})
+        total_pages = int(pagination.get("totalPages", 0) or 0)
 
         seen = set()
         result = []
@@ -411,7 +418,7 @@ class Spider(Spider):
             if sid and sid not in seen:
                 seen.add(sid)
                 result.append(item)
-        return result
+        return result, total_pages
 
     def _vod_list(self, videos):
         result = []
