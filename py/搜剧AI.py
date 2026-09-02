@@ -302,6 +302,12 @@ class Spider(Spider):
         self._detail_cache = {}
         self._detail_ts = {}
 
+    def isVideoFormat(self, url):
+        return False
+
+    def manualVideoCheck(self):
+        return False
+
     def _parse_extend(self, extend):
         ext = {}
         if extend:
