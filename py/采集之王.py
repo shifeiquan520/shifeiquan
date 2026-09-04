@@ -354,13 +354,15 @@ class Spider(Spider):
 
         for attempt in range(attempts):
             try:
+                t0 = time.time()
                 r = self.session.get(api, params=params,
                                      timeout=timeout or self.timeout, verify=False)
                 if r.status_code == 200:
                     j = r.json()
                     if isinstance(j, dict):
+                        latency = int((time.time() - t0) * 1000)
                         with self._health_lock:
-                            self.health[source['key']].record_ok(0)
+                            self.health[source['key']].record_ok(latency)
                         return j
             except Exception:
                 pass
@@ -612,7 +614,9 @@ class Spider(Spider):
             if not real_id or key not in {s['key'] for s in self.sources}:
                 return {'list': []}
 
-            main_src = next(s for s in self.sources if s['key'] == key)
+            main_src = next((s for s in self.sources if s['key'] == key), None)
+            if not main_src:
+                return {'list': []}
             j = self._fetch(main_src, ac='detail', ids=real_id)
             if not j or not j.get('list'):
                 return {'list': []}
