@@ -124,16 +124,7 @@
       "filterable": 1,
       "timeout": 60
     },  
-{
-      "key": "厂长影视",
-      "name": "厂长影视",
-      "type": 3,
-      "api": "./py/厂长.py",
-      "searchable": 1,
-      "quickSearch": 1,
-      "filterable": 1,
-      "timeout": 60
-    },  
+
 
 
  {
