@@ -11,9 +11,7 @@ import random
 import warnings
 import concurrent.futures
 from threading import Lock
-from urllib.parse import unquote, urlparse
-import urllib.request
-import urllib.error
+from urllib.parse import unquote
 
 import requests
 
@@ -110,23 +108,6 @@ DEFAULT_CFG = {
 }
 
 
-# ========================= DoH DNS 绕过 =========================
-def _doh_resolve(hostname, timeout=5):
-    """通过 Cloudflare DoH 解析域名，返回 IP 或 None"""
-    try:
-        url = "https://1.1.1.1/dns-query?name=%s&type=A" % hostname
-        req = urllib.request.Request(url, headers={
-            'Accept': 'application/dns-json',
-            'User-Agent': 'Mozilla/5.0'
-        })
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-            for ans in data.get('Answer', []):
-                if ans.get('type') == 1:
-                    return ans['data']
-    except Exception:
-        pass
-    return None
 
 
 # ========================= 工具函数 =========================
@@ -382,33 +363,14 @@ class Spider(Spider):
                             self.health[source['key']].record_ok(0)
                         return j
             except Exception:
-                # === DoH 备用：连接失败时用 DNS over HTTPS 解析 ===
-                try:
-                    parsed = urlparse(api)
-                    hostname = parsed.hostname
-                    if hostname:
-                        ip = _doh_resolve(hostname, timeout=3)
-                        if ip:
-                            doh_url = api.replace(hostname, ip, 1)
-                            r2 = self.session.get(doh_url, params=params,
-                                                  timeout=timeout or self.timeout,
-                                                  verify=False,
-                                                  headers={'Host': hostname})
-                            if r2.status_code == 200:
-                                j2 = r2.json()
-                                if isinstance(j2, dict):
-                                    with self._health_lock:
-                                        self.health[source['key']].record_ok(0)
-                                    return j2
-                except Exception:
-                    pass
+                pass
 
         with self._health_lock:
             self.health[source['key']].record_fail()
         return None
 
     # ---------- 并行 ----------
-    def _parallel(self, jobs):
+    def _parallel(self, jobs, early_return=0):
         if not jobs:
             return {}
         results = {}
@@ -422,6 +384,8 @@ class Spider(Spider):
                 results[k] = fut.result(timeout=self.timeout + 2)
             except Exception:
                 results[k] = None
+            if early_return and len([v for v in results.values() if v and v.get('list')]) >= early_return:
+                break
         return results
 
     # ---------- 缓存包装 ----------
@@ -579,9 +543,9 @@ class Spider(Spider):
             if not sources:
                 return {'list': [], 'page': page}
 
-            jobs = [(s['key'], lambda s=s: self._fetch(s, retry=True, timeout=5, ac='list', wd=key))
+            jobs = [(s['key'], lambda s=s: self._fetch(s, retry=False, timeout=3, ac='list', wd=key))
                     for s in sources]
-            data = self._parallel(jobs)
+            data = self._parallel(jobs, early_return=self.search_limit)
 
             groups = {}
             order = []
@@ -595,7 +559,7 @@ class Spider(Spider):
                         continue
                     type_name = _clean(v.get('type_name', ''))
                     year = str(v.get('vod_year', '') or '')
-                    gk = (name, year, type_name)
+                    gk = _norm_name(name)
                     if gk not in groups:
                         groups[gk] = []
                         order.append(gk)
