@@ -615,11 +615,16 @@ class Spider(Spider):
             for gk in order:
                 entries = groups[gk]
                 entries.sort(key=rank, reverse=True)
-                for src_key, v in entries:
-                    item = self._item(v, src_key, is_search=True)
-                    src_name = next((s['name'] for s in self.sources if s['key'] == src_key), src_key)
-                    item['vod_remarks'] = f"{src_name} {_clean(v.get('vod_remarks', ''))}".strip()
-                    result_list.append(item)
+                src_key, v = entries[0]
+                item = self._item(v, src_key, is_search=True)
+                src_name = next((s['name'] for s in self.sources if s['key'] == src_key), src_key)
+                remarks = _clean(v.get('vod_remarks', ''))
+                src_count = len(entries)
+                if src_count > 1:
+                    item['vod_remarks'] = f"{src_name} [{src_count}源] {remarks}".strip()
+                else:
+                    item['vod_remarks'] = f"{src_name} {remarks}".strip()
+                result_list.append(item)
 
             if len(result_list) > self.search_limit:
                 result_list = result_list[:self.search_limit]
