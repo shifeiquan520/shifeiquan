@@ -27,7 +27,7 @@ except ImportError:
     class Spider:
         pass
 
-SOURCES_URL = "https://gh-proxy.com/https://raw.githubusercontent.com/shifeiquan520/shifeiquan1/refs/heads/main/output/sources.json"
+SOURCES_URL = "https://gh-proxy.com/https://raw.githubusercontent.com/shifeiquan520/shifeiquan1/refs/heads/main/output/sources1.json"
 
 
 def _load_remote_sources():
