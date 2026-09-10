@@ -42,18 +42,15 @@ def _load_remote_sources():
         pass
     # 本地备用源（远程拉取失败时使用）
     return [
+        {"key": "cdn.dzzyapi.com", "name": "大众", "api": "https://cdn.dzzyapi.com/api.php/provide/vod/"},
+        {"key": "caiji.xgzyapi.com", "name": "西瓜", "api": "https://caiji.xgzyapi.com/api.php/provide/vod/"},
+        {"key": "caiji.maotaizy.cc", "name": "影剧资源网", "api": "https://caiji.maotaizy.cc/api.php/provide/vod/"},
+        {"key": "api.niuniuzy.me", "name": "牛牛资源网", "api": "https://api.niuniuzy.me/api.php/provide/vod/"},
+        {"key": "api.zuidapi.com", "name": "最大资源网", "api": "https://api.zuidapi.com/api.php/provide/vod/"},
+        {"key": "api.okzyw.net", "name": "OK资源", "api": "http://api.okzyw.net/api.php/provide/vod/"},
         {"key": "cj.lziapi.com", "name": "量子", "api": "https://cj.lziapi.com/api.php/provide/vod/"},
-        {"key": "caiji.dyttzyapi.com", "name": "天堂", "api": "https://caiji.dyttzyapi.com/api.php/provide/vod/"},
-        {"key": "cj.rycjapi.com", "name": "如意", "api": "https://cj.rycjapi.com/api.php/provide/vod/"},
-        {"key": "bfzyapi.com", "name": "暴风", "api": "https://bfzyapi.com/api.php/provide/vod/"},
-        {"key": "api.ffzyapi.com", "name": "非凡", "api": "https://api.ffzyapi.com/api.php/provide/vod/"},
-        {"key": "360zy.com", "name": "360", "api": "https://360zy.com/api.php/provide/vod/"},
-        {"key": "jszyapi.com", "name": "极速", "api": "https://jszyapi.com/api.php/provide/vod/"},
-        {"key": "api.zuidapi.com", "name": "最大", "api": "https://api.zuidapi.com/api.php/provide/vod/"},
-        {"key": "api.guangsuapi.com", "name": "光速", "api": "https://api.guangsuapi.com/api.php/provide/vod/"},
-        {"key": "api.ukuapi.com", "name": "优酷", "api": "https://api.ukuapi.com/api.php/provide/vod/"},
+        {"key": "api.guangsuapi.com", "name": "光速资源站", "api": "https://api.guangsuapi.com/api.php/provide/vod/"},
     ]
-
 
 # ========================= 可热更新配置 =========================
 DEFAULT_CFG = {
