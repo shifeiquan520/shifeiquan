@@ -64,7 +64,7 @@ DEFAULT_CFG = {
     "search_result_limit": 100,
     "search_sources": 15,
     "line_batch": 8,
-    "cache_ttl": 120,          # 秒
+    "cache_ttl": 300,          # 秒
 
     # 协议/链接
     "allow_non_direct": True,   # True=兜底 parse=1
