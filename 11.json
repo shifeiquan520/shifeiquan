@@ -274,7 +274,7 @@
       "key": "综合采集",
       "name": "综合采集",
       "type": 3,
-      "api": "./py/采集之王.py",
+      "api": "./py/综合采集.py",
       "searchable": 1,
       "quickSearch": 1,
       "filterable": 1,
