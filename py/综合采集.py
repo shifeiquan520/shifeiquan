@@ -41,8 +41,7 @@ def _load_remote_sources():
     except Exception:
         pass
     # 本地备用源（远程拉取失败时使用）
-    return [
-        {"key": "cdn.dzzyapi.com", "name": "大众", "api": "https://cdn.dzzyapi.com/api.php/provide/vod/"},
+    return [        
         {"key": "caiji.xgzyapi.com", "name": "西瓜", "api": "https://caiji.xgzyapi.com/api.php/provide/vod/"},
         {"key": "caiji.maotaizy.cc", "name": "影剧资源网", "api": "https://caiji.maotaizy.cc/api.php/provide/vod/"},
         {"key": "api.niuniuzy.me", "name": "牛牛资源网", "api": "https://api.niuniuzy.me/api.php/provide/vod/"},
