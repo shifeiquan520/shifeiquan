@@ -84,7 +84,8 @@ DEFAULT_CFG = {
         # 电影
         "动作片": "电影", "喜剧片": "电影", "爱情片": "电影",
         "科幻片": "电影", "恐怖片": "电影", "剧情片": "电影",
-        "战争片": "电影", 
+        "战争片": "电影", "犯罪片": "电影", "悬疑片": "电影",
+        "奇幻片": "电影", "冒险片": "电影",
 
         # 国产剧
         "国产剧": "国产剧", "大陆剧": "国产剧", "海外剧": "国产剧",
@@ -476,10 +477,11 @@ class Spider(Spider):
         items = []
         seen = set()
         for src_key, v in all_vods:
-            item = self._item(v, src_key, is_search=False)
-            if item['vod_id'] in seen:
+            name_key = _norm_name(v.get('vod_name', ''))
+            if not name_key or name_key in seen:
                 continue
-            seen.add(item['vod_id'])
+            seen.add(name_key)
+            item = self._item(v, src_key, is_search=False)
             items.append(item)
         result = items[:30]
         self.cache.set(ck, result)
@@ -525,10 +527,10 @@ class Spider(Spider):
             items = []
             seen = set()
             for src_key, vod in all_vods:
-                unique = f"{src_key}:{vod.get('vod_id', '')}"
-                if unique in seen:
+                name_key = _norm_name(vod.get('vod_name', ''))
+                if not name_key or name_key in seen:
                     continue
-                seen.add(unique)
+                seen.add(name_key)
                 items.append(self._item(vod, src_key, is_search=False))
 
             total = len(seen)
