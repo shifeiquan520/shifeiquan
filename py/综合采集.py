@@ -52,6 +52,7 @@ def _load_remote_sources():
         {"key": "api.guangsuapi.com", "name": "光速资源站", "api": "https://api.guangsuapi.com/api.php/provide/vod/"},
     ]
 
+
 # ========================= 可热更新配置 =========================
 DEFAULT_CFG = {
     # 请求与并发
@@ -71,7 +72,7 @@ DEFAULT_CFG = {
     "direct_exts": [".m3u8", ".mp4", ".flv", ".ts"],
 
     # 源管理
-    "source_check_interval": 3600,   # 秒，健康检查间隔
+    "source_check_interval": 999999,   # 秒，健康检查间隔（关闭探测）
     "source_max_failures": 3,        # 连续失败几次标记为死源
     "auto_disable_dead": True,
 
@@ -457,19 +458,24 @@ class Spider(Spider):
                                                      ac='list', pg=1)) for s in sources]
         data = self._parallel(jobs)
 
-        items = []
-        seen = set()
+        all_vods = []
         for s in sources:
             j = data.get(s['key'])
             if not j or not j.get('list'):
                 continue
             for v in j['list'][:30]:
-                item = self._item(v, s['key'], is_search=False)
-                # 统一去重键：source_key:vod_id
-                if item['vod_id'] in seen:
-                    continue
-                seen.add(item['vod_id'])
-                items.append(item)
+                all_vods.append((s['key'], v))
+
+        all_vods.sort(key=lambda x: x[1].get('vod_time', '') or '', reverse=True)
+
+        items = []
+        seen = set()
+        for src_key, v in all_vods:
+            item = self._item(v, src_key, is_search=False)
+            if item['vod_id'] in seen:
+                continue
+            seen.add(item['vod_id'])
+            items.append(item)
         result = items[:30]
         self.cache.set(ck, result)
         return result
@@ -496,8 +502,7 @@ class Spider(Spider):
 
             data = self._parallel(jobs)
 
-            items = []
-            seen = set()
+            all_vods = []
             pagecount = 0
             for s in sources:
                 j = data.get(s['key'])
@@ -508,11 +513,18 @@ class Spider(Spider):
                 except Exception:
                     pass
                 for vod in j['list']:
-                    unique = f"{s['key']}:{vod.get('vod_id', '')}"
-                    if unique in seen:
-                        continue
-                    seen.add(unique)
-                    items.append(self._item(vod, s['key'], is_search=False))
+                    all_vods.append((s['key'], vod))
+
+            all_vods.sort(key=lambda x: x[1].get('vod_time', '') or '', reverse=True)
+
+            items = []
+            seen = set()
+            for src_key, vod in all_vods:
+                unique = f"{src_key}:{vod.get('vod_id', '')}"
+                if unique in seen:
+                    continue
+                seen.add(unique)
+                items.append(self._item(vod, src_key, is_search=False))
 
             total = len(seen)
             limit = 20
