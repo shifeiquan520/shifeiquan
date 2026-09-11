@@ -41,14 +41,14 @@ def _load_remote_sources():
     except Exception:
         pass
     # 本地备用源（远程拉取失败时使用）
-    return [        
-        {"key": "caiji.xgzyapi.com", "name": "西瓜", "api": "https://caiji.xgzyapi.com/api.php/provide/vod/"},
-        {"key": "caiji.maotaizy.cc", "name": "影剧资源网", "api": "https://caiji.maotaizy.cc/api.php/provide/vod/"},
-        {"key": "api.niuniuzy.me", "name": "牛牛资源网", "api": "https://api.niuniuzy.me/api.php/provide/vod/"},
-        {"key": "api.zuidapi.com", "name": "最大资源网", "api": "https://api.zuidapi.com/api.php/provide/vod/"},
-        {"key": "api.okzyw.net", "name": "OK资源", "api": "http://api.okzyw.net/api.php/provide/vod/"},
-        {"key": "cj.lziapi.com", "name": "量子", "api": "https://cj.lziapi.com/api.php/provide/vod/"},
-        {"key": "api.guangsuapi.com", "name": "光速资源站", "api": "https://api.guangsuapi.com/api.php/provide/vod/"},
+    return [
+        {"key": "cdn.dzzyapi.com", "name": "大众", "api": "https://cdn.dzzyapi.com/api.php/provide/vod/", "latency_ms": 445},
+        {"key": "caiji.xgzyapi.com", "name": "西瓜", "api": "https://caiji.xgzyapi.com/api.php/provide/vod/", "latency_ms": 854},        
+        {"key": "api.niuniuzy.me", "name": "牛牛资源网", "api": "https://api.niuniuzy.me/api.php/provide/vod/", "latency_ms": 537},
+        {"key": "api.zuidapi.com", "name": "最大资源网", "api": "https://api.zuidapi.com/api.php/provide/vod/", "latency_ms": 130},
+        {"key": "api.okzyw.net", "name": "OK资源", "api": "http://api.okzyw.net/api.php/provide/vod/", "latency_ms": 327},
+        {"key": "cj.lziapi.com", "name": "量子", "api": "https://cj.lziapi.com/api.php/provide/vod/", "latency_ms": 447},
+        {"key": "api.guangsuapi.com", "name": "光速资源站", "api": "https://api.guangsuapi.com/api.php/provide/vod/", "latency_ms": 739},
     ]
 
 
@@ -74,6 +74,7 @@ DEFAULT_CFG = {
     "source_check_interval": 999999,   # 秒，健康检查间隔（关闭探测）
     "source_max_failures": 3,        # 连续失败几次标记为死源
     "auto_disable_dead": True,
+    "max_latency_ms": 600,           # 延迟超过此值的源不参与请求（ms），0=不限制
 
 # 分类别名映射（可在 extend 追加/覆盖）
     "category_aliases": {
@@ -83,7 +84,7 @@ DEFAULT_CFG = {
         # 电影
         "动作片": "电影", "喜剧片": "电影", "爱情片": "电影",
         "科幻片": "电影", "恐怖片": "电影", "剧情片": "电影",
-        "战争片": "电影", "动画片": "电影", "纪录片": "电影",
+        "战争片": "电影", 
 
         # 国产剧
         "国产剧": "国产剧", "大陆剧": "国产剧", "海外剧": "国产剧",
@@ -163,7 +164,7 @@ def _is_blocked(name):
 # 全局常用分类（可通过 cfg 覆盖）
 CATEGORIES = [
     '短剧', '电影', '国产剧', '港台剧', '动漫',
-    '综艺', '日韩剧', '欧美剧', '伦理片'
+    '综艺', '日韩剧', '欧美剧'
 ]
 
 
@@ -235,11 +236,16 @@ class Spider(Spider):
 
         # 允许通过 enabled_keys 裁剪源
         enabled = self.cfg.get('enabled_keys')
+        max_ms = self.cfg.get('max_latency_ms', 0)
         if isinstance(enabled, list) and enabled:
             enabled_set = set(enabled)
             self.sources = [s for s in self.cfg['sources'] if s['key'] in enabled_set]
         else:
             self.sources = list(self.cfg['sources'])
+
+        # 按延迟阈值过滤慢源
+        if max_ms > 0:
+            self.sources = [s for s in self.sources if s.get('latency_ms', 0) <= max_ms]
 
         # 运行时状态
         self.timeout = self.cfg['timeout']
@@ -646,6 +652,7 @@ class Spider(Spider):
             if not real_id or key not in {s['key'] for s in self.sources}:
                 return {'list': []}
 
+            # 先获取主源影片名（用于搜索其他源）
             main_src = next((s for s in self.sources if s['key'] == key), None)
             if not main_src:
                 return {'list': []}
@@ -656,36 +663,42 @@ class Spider(Spider):
             vod = j['list'][0]
             name = _clean(vod.get('vod_name', ''))
 
+            # 所有源并行请求（按 sources1.json 顺序）
+            all_srcs = self.sources[:self.cfg['line_batch']]
+            executor = self._get_executor()
+            futures = {}
+            for s in all_srcs:
+                if s['key'] == key:
+                    futures[executor.submit(lambda: j)] = s
+                else:
+                    futures[executor.submit(self._fetch, s, retry=False,
+                                           timeout=self.aux_timeout,
+                                           ac='detail', wd=name)] = s
+
+            # 按 self.sources 顺序收集线路
             play_froms, play_urls = [], []
-            self._collect_lines(key, vod, play_froms, play_urls)
-
-            # 其它源补线
-            others = [s for s in self.sources if s['key'] != key][:8]
-            if others:
-                executor = self._get_executor()
-                futures = {executor.submit(self._fetch, s, retry=False, timeout=self.aux_timeout,
-                                           ac='detail', wd=name): s for s in others}
-
-                for fut in concurrent.futures.as_completed(futures):
-                    if len(play_froms) >= self.cfg['line_batch']:
-                        break
-                    s = futures[fut]
-                    try:
-                        j2 = fut.result(timeout=self.aux_timeout + 1)
-                        if not j2 or not j2.get('list'):
-                            continue
-                        for v2 in j2['list']:
-                            n2 = _clean(v2.get('vod_name', ''))
-                            if not _same_name(n2, name):
-                                continue
-                            f2, u2 = [], []
-                            self._collect_lines(s['key'], v2, f2, u2)
-                            if u2 and len(play_froms) < self.cfg['line_batch']:
-                                play_froms.extend(f2)
-                                play_urls.extend(u2)
-                            break
-                    except Exception:
+            for s in all_srcs:
+                if len(play_froms) >= self.cfg['line_batch']:
+                    break
+                fut = next((f for f, src in futures.items() if src['key'] == s['key']), None)
+                if not fut:
+                    continue
+                try:
+                    j2 = fut.result(timeout=self.aux_timeout + 1)
+                    if not j2 or not j2.get('list'):
                         continue
+                    for v2 in j2['list']:
+                        n2 = _clean(v2.get('vod_name', ''))
+                        if not _same_name(n2, name):
+                            continue
+                        f2, u2 = [], []
+                        self._collect_lines(s['key'], v2, f2, u2)
+                        if u2 and len(play_froms) < self.cfg['line_batch']:
+                            play_froms.extend(f2)
+                            play_urls.extend(u2)
+                        break
+                except Exception:
+                    continue
 
             play_froms, play_urls = self._deduplicate_playlists(play_froms, play_urls)
             return {'list': [self._build_detail_dict(vid, vod, play_froms, play_urls)]}
