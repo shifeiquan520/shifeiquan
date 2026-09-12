@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-采集之王 - 多源聚合影视源（重构版）
+综合采集 - 多源聚合影视源（重构版）
 支持：热配置、源健康检测、缓存、线程池管理、分类别名、分页修复
 """
 
 import json
 import re
 import time
-import random
 import warnings
 import concurrent.futures
 from threading import Lock
@@ -28,6 +27,8 @@ except ImportError:
         pass
 
 
+
+
 # ========================= 可热更新配置 =========================
 DEFAULT_CFG = {
     # 请求与并发
@@ -35,75 +36,74 @@ DEFAULT_CFG = {
     "aux_timeout": 6,
     "max_workers": 16,
     "max_retries": 2,
-    "home_sources": 3,
-    "category_sources": 10,
     "search_result_limit": 100,
     "search_sources": 15,
     "line_batch": 8,
-    "cache_ttl": 120,          # 秒
+    "cache_ttl": 300,          # 秒
 
     # 协议/链接
     "allow_non_direct": True,   # True=兜底 parse=1
     "direct_exts": [".m3u8", ".mp4", ".flv", ".ts"],
 
     # 源管理
-    "source_check_interval": 3600,   # 秒，健康检查间隔
-    "source_max_failures": 3,        # 连续失败几次标记为死源
+    "source_max_failures": 5,        # 连续失败几次标记为死源
     "auto_disable_dead": True,
+    "max_latency_ms": 0,           # 延迟超过此值的源不参与请求（ms），0=不限制
 
-    # 分类别名映射（可在 extend 追加/覆盖）
+# 分类别名映射（可在 extend 追加/覆盖）
     "category_aliases": {
-        "记录片": "纪录片", "纪录片": "记录片",
-        "动漫": "动漫片", "动漫片": "动漫片", "番剧": "动漫片",
-        "国产剧": "国产剧", "大陆剧": "国产剧",
+        # 短剧
+        "短剧": "短剧", "AI漫剧": "短剧",
+
+        # 电影
+        "动作片": "电影", "喜剧片": "电影", "爱情片": "电影",
+        "科幻片": "电影", "恐怖片": "电影", "剧情片": "电影",
+        "战争片": "电影", "犯罪片": "电影", "悬疑片": "电影",
+        "奇幻片": "电影", "冒险片": "电影",
+
+        # 国产剧
+        "国产剧": "国产剧", "大陆剧": "国产剧", "海外剧": "国产剧",
+
+        # 港台剧
         "港台剧": "港台剧", "香港剧": "港台剧", "台湾剧": "港台剧",
+
+        # 动漫
+        "国产动漫": "动漫", "日韩动漫": "动漫", "欧美动漫": "动漫",
+
+        # 综艺
+        "大陆综艺": "综艺", "港台综艺": "综艺",
+        "日韩综艺": "综艺", "欧美综艺": "综艺",
+
+        # 日韩剧
         "日韩剧": "日韩剧", "韩国剧": "日韩剧", "日本剧": "日韩剧",
+
+        # 欧美剧
         "欧美剧": "欧美剧", "美剧": "欧美剧", "英剧": "欧美剧",
-        "海外剧": "海外剧", "泰国剧": "海外剧",
-        "短剧": "短剧",
+
+        # 伦理片（补充细分）
+        "伦理片": "伦理片",
+        "日韩伦理": "伦理片",
+        "三级伦理": "伦理片",
+        "三级片": "伦理片",
+        "大陆伦理": "伦理片",
     },
 
-    # 源列表（可在 extend 里用 enabled_keys 覆盖/裁剪）
+    # 源列表（硬编码固定源）
     "sources": [
-        {"key": "lzi", "name": "量子", "api": "https://cj.lziapi.com/api.php/provide/vod"},
-        {"key": "dyttzy", "name": "天堂", "api": "https://caiji.dyttzyapi.com/api.php/provide/vod"},
-        {"key": "ruyi", "name": "如意", "api": "https://cj.rycjapi.com/api.php/provide/vod"},
-        {"key": "bfzy", "name": "暴风", "api": "https://bfzyapi.com/api.php/provide/vod"},
-        {"key": "ffzy", "name": "非凡", "api": "https://ffzy5.tv/api.php/provide/vod"},
-        {"key": "zy360", "name": "360", "api": "https://360zy.com/api.php/provide/vod"},
-        {"key": "jisu", "name": "极速", "api": "https://jszyapi.com/api.php/provide/vod"},
-        {"key": "zuid", "name": "最大", "api": "https://api.zuidapi.com/api.php/provide/vod"},
-        {"key": "ty", "name": "天涯", "api": "https://tyyszyapi.com/api.php/provide/vod"},
-        {"key": "hhzy", "name": "火狐", "api": "https://hhzyapi.com/api.php/provide/vod"},
-        {"key": "hwzy", "name": "华为", "api": "https://cjhwba.com/api.php/provide/vod"},
-        {"key": "mtzy", "name": "茅台", "api": "https://caiji.maotaizy.cc/api.php/provide/vod"},
-        {"key": "myzy", "name": "猫眼", "api": "https://api.maoyanapi.top/api.php/provide/vod"},
-        {"key": "wsyzy", "name": "无水印", "api": "https://api.wsyzy.net/api.php/provide/vod"},
-        {"key": "1080zy", "name": "1080", "api": "https://api.1080zyku.com/inc/api_mac10.php"},
-        {"key": "155zy", "name": "155", "api": "https://155api.com/api.php/provide/vod"},
-        {"key": "sdzy", "name": "闪电", "api": "https://sdzyapi.com/api.php/provide/vod"},
-        {"key": "suoni", "name": "索尼", "api": "https://suoniapi.com/api.php/provide/vod"},
-        {"key": "hnzy", "name": "红牛", "api": "https://www.hongniuzy2.com/api.php/provide/vod"},
-        {"key": "hyzy", "name": "虎牙", "api": "https://www.huyaapi.com/api.php/provide/vod"},
-        {"key": "dbzy", "name": "豆瓣", "api": "https://caiji.dbzy.tv/api.php/provide/vod"},
-        {"key": "uku", "name": "优酷", "api": "https://api.ukuapi.com/api.php/provide/vod"},
-        {"key": "ikun", "name": "爱坤", "api": "https://ikunzyapi.com/api.php/provide/vod"},
-        {"key": "wujin", "name": "无尽", "api": "https://api.wujinapi.cc/api.php/provide/vod"},
-        {"key": "guangsu", "name": "光速", "api": "https://api.guangsuapi.com/api.php/provide/vod"},
-        {"key": "wolong", "name": "卧龙", "api": "https://collect.wolongzyw.com/api.php/provide/vod"},
-        {"key": "xinlang", "name": "新浪", "api": "https://api.xinlangapi.com/xinlangapi.php/provide/vod"},
-        {"key": "wwzy", "name": "旺旺", "api": "https://api.wwzy.tv/api.php/provide/vod"},
-        {"key": "yhzy", "name": "樱花", "api": "https://m3u8.apiyhzy.com/api.php/provide/vod"},
-        {"key": "nnzy", "name": "牛牛", "api": "https://api.niuniuzy.me/api.php/provide/vod"},
-        {"key": "baiduyun", "name": "百度", "api": "https://api.apibdzy.com/api.php/provide/vod"},
-        {"key": "subo", "name": "速播", "api": "https://subocaiji.com/api.php/provide/vod"},
-        {"key": "jinying", "name": "金鹰", "api": "https://jinyingzy.com/api.php/provide/vod"},
-        {"key": "piaoling", "name": "飘零", "api": "https://p2100.net/api.php/provide/vod"},
-        {"key": "mozhua", "name": "魔爪", "api": "https://mozhuazy.com/api.php/provide/vod"},
-        {"key": "modu", "name": "魔都", "api": "https://www.mdzyapi.com/api.php/provide/vod"},
-        {"key": "xgzy", "name": "西瓜", "api": "https://caiji.xgzyapi.com/api.php/provide/vod"},
-        {"key": "98zy", "name": "98", "api": "https://98zy.vip/api.php/provide/vod"},
-        {"key": "dzzy", "name": "大众", "api": "https://cdn.dzzyapi.com/api.php/provide/vod"},
+        {"key": "cj.lziapi.com", "name": "量子", "api": "https://cj.lziapi.com/api.php/provide/vod/"},
+        {"key": "api.zuidapi.com", "name": "最大资源网", "api": "https://api.zuidapi.com/api.php/provide/vod/"},
+        {"key": "wujin", "name": "无尽", "api": "https://api.wujinapi.cc/api.php/provide/vod/"},
+        {"key": "api.guangsuapi.com", "name": "光速资源站", "api": "https://api.guangsuapi.com/api.php/provide/vod/"},
+        {"key": "api.ffzyapi.com", "name": "非凡资源网", "api": "http://api.ffzyapi.com/api.php/provide/vod/"},
+        {"key": "yhzy", "name": "樱花", "api": "https://m3u8.apiyhzy.com/api.php/provide/vod/"},
+        {"key": "ffzy", "name": "非凡", "api": "https://ffzy5.tv/api.php/provide/vod/"},
+        {"key": "www.huyaapi.com", "name": "虎牙资源", "api": "https://www.huyaapi.com/api.php/provide/vod/"},
+        {"key": "caiji.xgzyapi.com", "name": "西瓜", "api": "https://caiji.xgzyapi.com/api.php/provide/vod/"},
+        {"key": "api.wujinapi.me", "name": "无尽资源网", "api": "https://api.wujinapi.me/api.php/provide/vod/"},
+        {"key": "api.okzyw.net", "name": "OK资源", "api": "http://api.okzyw.net/api.php/provide/vod/"},
+        {"key": "xinlang", "name": "新浪", "api": "https://api.xinlangapi.com/xinlangapi.php/provide/vod/"},
+        {"key": "api.apibdzy.com", "name": "百度", "api": "https://api.apibdzy.com/api.php/provide/vod/"},
+        {"key": "api.ukuapi88.com", "name": "uku资源", "api": "https://api.ukuapi88.com/api.php/provide/vod/"},
     ],
 }
 
@@ -117,8 +117,8 @@ def _clean(text):
     if not text:
         return ''
     text = _TAG_RE.sub('', str(text))
-    text = text.replace('&nbsp;', ' ').replace('&', '&')
-    text = text.replace('"', '"').replace('<', '<').replace('>', '>')
+    text = text.replace('&nbsp;', ' ').replace('&amp;', '&')
+    text = text.replace('&quot;', '"').replace('&lt;', '<').replace('&gt;', '>')
     return re.sub(r'\s+', ' ', text).strip()
 
 def _is_direct(url, allowed_exts):
@@ -147,17 +147,17 @@ def _is_blocked(name):
     block = [
         r'番外篇?$', r'预告片?$', r'花絮$', r'幕后$',
         r'特辑$', r'先导$', r'宣传片$', r'片段$',
-        r'采访$', r'制作特辑$', r'拍摄花絮$'
+        r'采访$', r'制作特辑$', r'拍摄花絮$',
+        r'解[说析]', r'解说版$', r'解说全集$',
+        r'一口气看完', r'分钟看完', r'速看', r'详解',
     ]
     return any(re.search(p, n) for p in block)
 
 # 全局常用分类（可通过 cfg 覆盖）
 CATEGORIES = [
-    '短剧', 'AI漫剧', '国产剧', '香港剧', '韩国剧', '国产动漫','战争片','动画片','动作片', '喜剧片','欧美剧', '日本剧',
-    '台湾剧', '泰国剧', '海外剧',  '爱情片', '科幻片',
-    '恐怖片', '剧情片', '纪录片', '电影解说',
-    '大陆综艺', '港台综艺', '日韩综艺', '欧美综艺',
-     '日韩动漫', '欧美动漫'
+    '短剧', '电影', '国产剧', '港台剧', '动漫',
+    '综艺', '日韩剧', '欧美剧', '伦理片'
+
 ]
 
 
@@ -214,7 +214,7 @@ class SimpleCache:
 # ========================= 主 Spider =========================
 class Spider(Spider):
     def getName(self):
-        return '采集之王'
+        return '综合采集'
 
     def init(self, extend=''):
         # 合并配置
@@ -229,19 +229,22 @@ class Spider(Spider):
 
         # 允许通过 enabled_keys 裁剪源
         enabled = self.cfg.get('enabled_keys')
+        max_ms = self.cfg.get('max_latency_ms', 0)
         if isinstance(enabled, list) and enabled:
             enabled_set = set(enabled)
             self.sources = [s for s in self.cfg['sources'] if s['key'] in enabled_set]
         else:
             self.sources = list(self.cfg['sources'])
 
+        # 按延迟阈值过滤慢源
+        if max_ms > 0:
+            self.sources = [s for s in self.sources if s.get('latency_ms', 0) <= max_ms]
+
         # 运行时状态
         self.timeout = self.cfg['timeout']
         self.aux_timeout = self.cfg['aux_timeout']
         self.max_workers = self.cfg['max_workers']
         self.max_retries = self.cfg['max_retries']
-        self.home_sources = self.cfg['home_sources']
-        self.category_sources = self.cfg['category_sources']
         self.search_limit = self.cfg['search_result_limit']
         self.search_sources = self.cfg.get('search_sources', 15)
         self.allowed_exts = tuple(self.cfg['direct_exts'])
@@ -256,7 +259,6 @@ class Spider(Spider):
         # 源健康
         self.health = {s['key']: SourceHealth(s['key']) for s in self.sources}
         self._health_lock = Lock()
-        self._last_health_check = 0
 
         # 缓存
         self.cache = SimpleCache(self.cfg['cache_ttl'])
@@ -272,11 +274,24 @@ class Spider(Spider):
         self._cat_meta_cache = {}
         self._cat_meta_ts = {}
 
-        # 远程配置缓存
-        self._jumps_cache = ("", "")
-        self._jumps_expire = 0
+        # 启动时探测所有源
+        self._probe_all_sources()
 
     # ---------- 生命周期 ----------
+    def destroy(self):
+        try:
+            if self._executor:
+                self._executor.shutdown(wait=True, cancel_futures=True)
+        except Exception:
+            pass
+        self._executor = None
+        try:
+            self.session.close()
+        except Exception:
+            pass
+
+    def __del__(self):
+        self.destroy()
 
     def _get_executor(self):
         with self._executor_lock:
@@ -284,27 +299,18 @@ class Spider(Spider):
                 self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.cfg['max_workers'])
         return self._executor
 
-    # ---------- 源健康检查 ----------
-    def _maybe_health_check(self):
-        now = time.time()
-        interval = self.cfg['source_check_interval']
-        if now - self._last_health_check < interval:
-            return
-        self._last_health_check = now
-
-        # 简单探活：随机抽 3 个源做 HEAD/GET
-        candidates = [s for s in self.sources if not self.health[s['key']].disabled]
-        if not candidates:
-            return
-        sample = random.sample(candidates, min(3, len(candidates)))
-
+    # ---------- 启动探测所有源 ----------
+    def _probe_all_sources(self):
+        """启动时同步探测所有源，标记不可用源"""
         def probe(src):
             key = src['key']
             try:
                 t0 = time.time()
-                r = self.session.get(src['api'].split('?', 1)[0],
-                                     params={'ac': 'list', 'pg': 1},
-                                     timeout=self.cfg['timeout'], verify=False)
+                r = self.session.get(
+                    src['api'].split('?', 1)[0],
+                    params={'ac': 'list', 'pg': 1},
+                    timeout=self.cfg['timeout'], verify=False
+                )
                 latency = int((time.time() - t0) * 1000)
                 if r.status_code == 200:
                     with self._health_lock:
@@ -317,25 +323,20 @@ class Spider(Spider):
                     self.health[key].record_fail()
 
         executor = self._get_executor()
-        futures = {executor.submit(probe, src): src for src in sample}
+        futures = {executor.submit(probe, s): s for s in self.sources}
         for fut in concurrent.futures.as_completed(futures):
             try:
-                fut.result(timeout=self.cfg['timeout'] + 1)
+                fut.result(timeout=self.cfg['timeout'] + 2)
             except Exception:
                 pass
 
-        # 标记死源
         if self.cfg['auto_disable_dead']:
             with self._health_lock:
                 for h in self.health.values():
                     if h.failures >= self.cfg['source_max_failures']:
                         h.disabled = True
 
-        # 清理过期缓存
-        self.cache.clear_expired()
-
     def _get_alive_sources(self, limit=None):
-        self._maybe_health_check()
         alive = [s for s in self.sources if not self.health[s['key']].disabled]
         # 按延迟排序（低优先）
         alive.sort(key=lambda s: self.health[s['key']].latency_ms or 9999)
@@ -410,7 +411,7 @@ class Spider(Spider):
             'vod_remarks': _clean(vod.get('vod_remarks', '')) or '',
         }
 
-    # ---------- 首页 ----------
+# ---------- 首页 ----------
     def homeContent(self, filter):
         result = {
             'class': [{'type_id': n, 'type_name': n} for n in self._categories],
@@ -429,26 +430,39 @@ class Spider(Spider):
         if cached is not None:
             return cached
 
-        sources = self._get_alive_sources(self.home_sources)
-        if not sources:
+        # 获取所有可用源（按延迟排序）
+        alive = self._get_alive_sources()
+        if not alive:
             return []
+
+        # 量子源固定 + 其他最快2个
+        qz_src = next((s for s in alive if s['key'] == 'cj.lziapi.com'), None)
+        others = [s for s in alive if s['key'] != 'cj.lziapi.com']
+        sources = [qz_src] + others[:2] if qz_src else others[:3]
 
         jobs = [(s['key'], lambda s=s: self._fetch(s, retry=False, timeout=self.aux_timeout,
                                                      ac='list', pg=1)) for s in sources]
         data = self._parallel(jobs)
 
-        items = []
-        seen = set()
+        all_vods = []
         for s in sources:
             j = data.get(s['key'])
             if not j or not j.get('list'):
                 continue
             for v in j['list'][:30]:
-                item = self._item(v, s['key'], is_search=False)
-                if item['vod_id'] in seen:
-                    continue
-                seen.add(item['vod_id'])
-                items.append(item)
+                all_vods.append((s['key'], v))
+
+        all_vods.sort(key=lambda x: x[1].get('vod_time', '') or '', reverse=True)
+
+        items = []
+        seen = set()
+        for src_key, v in all_vods:
+            name_key = _norm_name(v.get('vod_name', ''))
+            if not name_key or name_key in seen:
+                continue
+            seen.add(name_key)
+            item = self._item(v, src_key, is_search=False)
+            items.append(item)
         result = items[:30]
         self.cache.set(ck, result)
         return result
@@ -461,9 +475,15 @@ class Spider(Spider):
                 return {'list': [], 'page': 1, 'pagecount': 0, 'limit': 20, 'total': 0}
 
             page = int(pg) if str(pg).isdigit() else 1
-            sources = self._get_alive_sources(self.category_sources)
-            if not sources:
+            # 获取所有可用源（按延迟排序）
+            alive = self._get_alive_sources()
+            if not alive:
                 return {'list': [], 'page': page, 'pagecount': 0, 'limit': 20, 'total': 0}
+
+            # 量子源固定 + 其他最快9个
+            qz_src = next((s for s in alive if s['key'] == 'cj.lziapi.com'), None)
+            others = [s for s in alive if s['key'] != 'cj.lziapi.com']
+            sources = [qz_src] + others[:9] if qz_src else others[:10]
 
             # 并行拿分类数据（单次请求，利用缓存）
             jobs = []
@@ -475,8 +495,7 @@ class Spider(Spider):
 
             data = self._parallel(jobs)
 
-            items = []
-            seen = set()
+            all_vods = []
             pagecount = 0
             for s in sources:
                 j = data.get(s['key'])
@@ -487,11 +506,18 @@ class Spider(Spider):
                 except Exception:
                     pass
                 for vod in j['list']:
-                    unique = f"{s['key']}:{vod.get('vod_id', '')}"
-                    if unique in seen:
-                        continue
-                    seen.add(unique)
-                    items.append(self._item(vod, s['key'], is_search=False))
+                    all_vods.append((s['key'], vod))
+
+            all_vods.sort(key=lambda x: x[1].get('vod_time', '') or '', reverse=True)
+
+            items = []
+            seen = set()
+            for src_key, vod in all_vods:
+                name_key = _norm_name(vod.get('vod_name', ''))
+                if not name_key or name_key in seen:
+                    continue
+                seen.add(name_key)
+                items.append(self._item(vod, src_key, is_search=False))
 
             total = len(seen)
             limit = 20
@@ -532,20 +558,18 @@ class Spider(Spider):
             self._cat_meta_cache[key][cat_name] = src_tid
             self._cat_meta_ts[key] = now
         return self._fetch(source, retry=False, timeout=self.aux_timeout,
-                           ac='detail', t=src_tid, pg=pg)
+                           ac='list', t=src_tid, pg=pg)
 
     # ---------- 搜索 ----------
     def searchContent(self, key, quick, pg='1'):
         try:
             page = int(pg) if str(pg).isdigit() else 1
-            if page > 1:
-                return {'list': [], 'page': page}
 
             sources = self._get_alive_sources(self.search_sources)
             if not sources:
                 return {'list': [], 'page': page}
 
-            jobs = [(s['key'], lambda s=s: self._fetch(s, retry=False, timeout=3, ac='list', wd=key))
+            jobs = [(s['key'], lambda s=s: self._fetch(s, retry=False, timeout=3, ac='list', wd=key, pg=page))
                     for s in sources]
             data = self._parallel(jobs, early_return=self.search_limit)
 
@@ -614,46 +638,77 @@ class Spider(Spider):
             if not real_id or key not in {s['key'] for s in self.sources}:
                 return {'list': []}
 
+            # 先获取主源影片名（用于搜索其他源）
             main_src = next((s for s in self.sources if s['key'] == key), None)
             if not main_src:
                 return {'list': []}
             j = self._fetch(main_src, ac='detail', ids=real_id)
+
+            # 主源失败时，用名称搜索其他源兜底
             if not j or not j.get('list'):
-                return {'list': []}
+                for s in self.sources:
+                    if s['key'] == key:
+                        continue
+                    j = self._fetch(s, retry=False, timeout=self.aux_timeout,
+                                    ac='list', wd=real_id)
+                    if j and j.get('list'):
+                        # 找到同名影片
+                        for v in j['list']:
+                            if _same_name(_clean(v.get('vod_name', '')), real_id):
+                                j = {'list': [v]}
+                                key = s['key']
+                                break
+                        if j.get('list'):
+                            break
+                if not j or not j.get('list'):
+                    return {'list': []}
 
             vod = j['list'][0]
             name = _clean(vod.get('vod_name', ''))
 
+            # 所有源并行请求（按 sources 顺序）
+            all_srcs = self.sources[:self.cfg['line_batch']]
+            executor = self._get_executor()
+            futures = {}
+            for s in all_srcs:
+                if s['key'] == key:
+                    futures[executor.submit(lambda _j=j: _j)] = s
+                else:
+                    futures[executor.submit(self._fetch, s, retry=False,
+                                           timeout=self.aux_timeout,
+                                           ac='detail', wd=name)] = s
+
+            # 按 self.sources 顺序收集线路
             play_froms, play_urls = [], []
-            self._collect_lines(key, vod, play_froms, play_urls)
-
-            # 其它源补线
-            others = [s for s in self.sources if s['key'] != key][:8]
-            if others:
-                executor = self._get_executor()
-                futures = {executor.submit(self._fetch, s, retry=False, timeout=self.aux_timeout,
-                                           ac='detail', wd=name): s for s in others}
-
-                for fut in concurrent.futures.as_completed(futures):
-                    if len(play_froms) >= self.cfg['line_batch']:
-                        break
-                    s = futures[fut]
-                    try:
-                        j2 = fut.result(timeout=self.aux_timeout + 1)
-                        if not j2 or not j2.get('list'):
-                            continue
-                        for v2 in j2['list']:
-                            n2 = _clean(v2.get('vod_name', ''))
-                            if not _same_name(n2, name):
-                                continue
-                            f2, u2 = [], []
-                            self._collect_lines(s['key'], v2, f2, u2)
-                            if u2 and len(play_froms) < self.cfg['line_batch']:
-                                play_froms.extend(f2)
-                                play_urls.extend(u2)
-                            break
-                    except Exception:
+            for s in all_srcs:
+                if len(play_froms) >= self.cfg['line_batch']:
+                    break
+                fut = next((f for f, src in futures.items() if src['key'] == s['key']), None)
+                if not fut:
+                    continue
+                try:
+                    j2 = fut.result(timeout=self.aux_timeout + 1)
+                    if not j2 or not j2.get('list'):
                         continue
+                    for v2 in j2['list']:
+                        n2 = _clean(v2.get('vod_name', ''))
+                        if not _same_name(n2, name):
+                            # 放宽匹配：前10字前缀匹配兜底
+                            n2_short = _norm_name(n2)[:10]
+                            name_short = _norm_name(name)[:10]
+                            if not (n2_short and name_short and
+                                    (n2_short == name_short or
+                                     n2_short.startswith(name_short) or
+                                     name_short.startswith(n2_short))):
+                                continue
+                        f2, u2 = [], []
+                        self._collect_lines(s['key'], v2, f2, u2)
+                        if u2 and len(play_froms) < self.cfg['line_batch']:
+                            play_froms.extend(f2)
+                            play_urls.extend(u2)
+                        break
+                except Exception:
+                    continue
 
             play_froms, play_urls = self._deduplicate_playlists(play_froms, play_urls)
             return {'list': [self._build_detail_dict(vid, vod, play_froms, play_urls)]}
@@ -667,14 +722,17 @@ class Spider(Spider):
         if src_name in play_froms:
             return
 
-        from_raw = str(vod.get('vod_play_from', '') or '').replace('$$$', ',').replace('，', ',')
-        urls = [x.strip() for x in str(vod.get('vod_play_url', '') or '').split('$$$') if x.strip()]
+        # 按 $$$ 分割线路名和播放地址
+        from_names = str(vod.get('vod_play_from', '') or '').replace('，', ',').split('$$$')
+        url_groups = str(vod.get('vod_play_url', '') or '').split('$$$')
 
-        episodes = []
-        seen_ep = set()
-        for url_group in urls:
+        for i, (from_name, url_group) in enumerate(zip(from_names, url_groups)):
             if not url_group:
                 continue
+            from_name = _clean(from_name) or f'{src_name}{i+1}'
+
+            episodes = []
+            seen_ep = set()
             for ep in url_group.split('#'):
                 parts = ep.split('$')
                 if len(parts) < 2:
@@ -689,9 +747,12 @@ class Spider(Spider):
                 seen_ep.add(mark)
                 episodes.append(f"{ep_name}${ep_url}")
 
-        if episodes:
-            play_froms.append(_clean(src.get('name', src_key)) or src_key)
-            play_urls.append('#'.join(episodes))
+            if episodes:
+                if len(from_names) > 1:
+                    play_froms.append(f'{src_name}线路{i+1}')
+                else:
+                    play_froms.append(f'{src_name}线路')
+                play_urls.append('#'.join(episodes))
 
     def _deduplicate_playlists(self, play_froms, play_urls):
         uniq_froms, uniq_urls = [], []
@@ -751,21 +812,6 @@ class Spider(Spider):
 
     def manualVideoCheck(self):
         return False
-
-    def destroy(self):
-        try:
-            if self._executor:
-                self._executor.shutdown(wait=True, cancel_futures=True)
-        except Exception:
-            pass
-        self._executor = None
-        try:
-            self.session.close()
-        except Exception:
-            pass
-
-    def __del__(self):
-        self.destroy()
 
     def localProxy(self, param):
         return None
