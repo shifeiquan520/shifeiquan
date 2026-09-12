@@ -441,7 +441,7 @@ class Spider(Spider):
         sources = [qz_src] + others[:2] if qz_src else others[:3]
 
         jobs = [(s['key'], lambda s=s: self._fetch(s, retry=False, timeout=self.aux_timeout,
-                                                     ac='list', pg=1)) for s in sources]
+                                                     ac='detail', pg=1)) for s in sources]
         data = self._parallel(jobs)
 
         all_vods = []
@@ -558,7 +558,7 @@ class Spider(Spider):
             self._cat_meta_cache[key][cat_name] = src_tid
             self._cat_meta_ts[key] = now
         return self._fetch(source, retry=False, timeout=self.aux_timeout,
-                           ac='list', t=src_tid, pg=pg)
+                           ac='detail', t=src_tid, pg=pg)
 
     # ---------- 搜索 ----------
     def searchContent(self, key, quick, pg='1'):
