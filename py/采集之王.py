@@ -11,6 +11,7 @@ import warnings
 import concurrent.futures
 from threading import Lock
 from urllib.parse import unquote
+from itertools import zip_longest
 
 import requests
 
@@ -48,7 +49,7 @@ DEFAULT_CFG = {
     # 源管理
     "source_max_failures": 5,        # 连续失败几次标记为死源
     "auto_disable_dead": True,
-    "max_latency_ms": 0,           # 延迟超过此值的源不参与请求（ms），0=不限制
+    "max_latency_ms": 800,           # 延迟超过此值的源不参与请求（ms），0=不限制
 
 # 分类别名映射（可在 extend 追加/覆盖）
     "category_aliases": {
@@ -95,7 +96,7 @@ DEFAULT_CFG = {
         {"key": "wujin", "name": "无尽", "api": "https://api.wujinapi.cc/api.php/provide/vod/"},
         {"key": "api.guangsuapi.com", "name": "光速资源站", "api": "https://api.guangsuapi.com/api.php/provide/vod/"},
         {"key": "api.ffzyapi.com", "name": "非凡资源网", "api": "http://api.ffzyapi.com/api.php/provide/vod/"},
-        {"key": "yhzy", "name": "樱花", "api": "https://m3u8.apiyhzy.com/api.php/provide/vod/"},
+        {"key": "yhzy", "name": "樱花", "api": "https://m3u8.apiyhzy.com/api.php/provide/vod/"},      
         {"key": "www.huyaapi.com", "name": "虎牙资源", "api": "https://www.huyaapi.com/api.php/provide/vod/"},
         {"key": "caiji.xgzyapi.com", "name": "西瓜", "api": "https://caiji.xgzyapi.com/api.php/provide/vod/"},
         {"key": "api.okzyw.net", "name": "OK资源", "api": "http://api.okzyw.net/api.php/provide/vod/"},
@@ -274,6 +275,9 @@ class Spider(Spider):
 
         # 启动时探测所有源
         self._probe_all_sources()
+        
+        # 预热分类 type_id 映射
+        self._preheat_categories()
 
     # ---------- 生命周期 ----------
     def destroy(self):
@@ -334,10 +338,45 @@ class Spider(Spider):
                     if h.failures >= self.cfg['source_max_failures']:
                         h.disabled = True
 
+    def _preheat_categories(self):
+        """启动时预热所有源的分类 type_id 映射"""
+        def preheat(src):
+            key = src['key']
+            try:
+                meta = self.session.get(
+                    src['api'].split('?', 1)[0],
+                    params={'ac': 'list', 'pg': 1},
+                    timeout=self.cfg['timeout'], verify=False
+                )
+                if meta.status_code == 200:
+                    data = meta.json()
+                    if isinstance(data, dict):
+                        with self._health_lock:
+                            self._cat_meta_cache[key] = {}
+                            for item in data.get('class', []):
+                                cat_name = item.get('type_name', '')
+                                type_id = item.get('type_id', '')
+                                if cat_name and type_id:
+                                    self._cat_meta_cache[key][cat_name] = str(type_id)
+                            self._cat_meta_ts[key] = time.time()
+            except Exception:
+                pass
+
+        executor = self._get_executor()
+        futures = {executor.submit(preheat, s): s for s in self.sources}
+        for fut in concurrent.futures.as_completed(futures):
+            try:
+                fut.result(timeout=self.cfg['timeout'] + 2)
+            except Exception:
+                pass
+
     def _get_alive_sources(self, limit=None):
         alive = [s for s in self.sources if not self.health[s['key']].disabled]
         # 按延迟排序（低优先）
         alive.sort(key=lambda s: self.health[s['key']].latency_ms or 9999)
+        # 过滤慢源
+        if self.cfg['max_latency_ms'] > 0:
+            alive = [s for s in alive if (self.health[s['key']].latency_ms or 0) <= self.cfg['max_latency_ms']]
         if limit:
             return alive[:limit]
         return alive
@@ -439,8 +478,8 @@ class Spider(Spider):
         sources = [qz_src] + others[:2] if qz_src else others[:3]
 
         jobs = [(s['key'], lambda s=s: self._fetch(s, retry=False, timeout=self.aux_timeout,
-                                                     ac='detail', pg=1)) for s in sources]
-        data = self._parallel(jobs)
+                                                     ac='list', pg=1)) for s in sources]
+        data = self._parallel(jobs, early_return=2)
 
         all_vods = []
         for s in sources:
@@ -491,7 +530,7 @@ class Spider(Spider):
                     return self._cached_fetch(ck, lambda: self._category_fetch(s, cat_name, pg))
                 jobs.append((s['key'], fn))
 
-            data = self._parallel(jobs)
+            data = self._parallel(jobs, early_return=5)
 
             all_vods = []
             pagecount = 0
@@ -707,6 +746,9 @@ class Spider(Spider):
                         break
                 except Exception:
                     continue
+                # early_return: 有8条线路就停止请求
+                if len(play_froms) >= 8:
+                    break
 
             play_froms, play_urls = self._deduplicate_playlists(play_froms, play_urls)
             return {'list': [self._build_detail_dict(vid, vod, play_froms, play_urls)]}
@@ -724,7 +766,7 @@ class Spider(Spider):
         from_names = str(vod.get('vod_play_from', '') or '').replace('，', ',').split('$$$')
         url_groups = str(vod.get('vod_play_url', '') or '').split('$$$')
 
-        for i, (from_name, url_group) in enumerate(zip(from_names, url_groups)):
+        for i, (from_name, url_group) in enumerate(zip_longest(from_names, url_groups, fillvalue='')):
             if not url_group:
                 continue
             from_name = _clean(from_name) or f'{src_name}{i+1}'
