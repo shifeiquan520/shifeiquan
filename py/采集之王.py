@@ -38,7 +38,7 @@ DEFAULT_CFG = {
     "max_retries": 2,
     "search_result_limit": 100,
     "search_sources": 15,
-    "line_batch": 8,
+    "line_batch": 12,
     "cache_ttl": 300,          # 秒
 
     # 协议/链接
