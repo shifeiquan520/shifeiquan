@@ -101,19 +101,6 @@
       "filterable": 1,
       "timeout": 60
     },  
-
-
-{
-      "key": "七星短剧",
-      "name": "七星短剧",
-      "type": 3,
-      "api": "./py/七星短剧.py",
-      "searchable": 1,
-      "quickSearch": 1,
-      "filterable": 1,
-      "timeout": 60
-    },  
-	 
 {
       "key": "搜剧AI",
       "name": "搜剧AI",
@@ -124,7 +111,6 @@
       "filterable": 1,
       "timeout": 60
     },  
-
 
 
  {
@@ -157,9 +143,7 @@
       "api": "csp_Wwys",
       "ext": "https://vip.wwgz.cn:5200"
     },
-
-
-	   {
+ {
       "name": "菠菜专线1",
       "key": "AppV7Fz",
       "type": 3,
@@ -210,8 +194,7 @@
 
 
 
-
-  {
+{
       "key": "1905",
       "name": "1905｜影视",
       "type": 3,
@@ -221,7 +204,6 @@
       "filterable": 0
     }, 
     
-
  {
       "key": "移动",
       "name": "移动｜影视",
@@ -270,6 +252,8 @@
         "ratio": 1.597
       }
     },
+
+
 {
       "key": "综合采集",
       "name": "综合采集",
