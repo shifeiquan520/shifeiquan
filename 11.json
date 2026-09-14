@@ -1,28 +1,27 @@
 {
   
-"spider": "./jar/ou.jar",
+ "spider": "./jar/ou.jar",
+
 "wallpaper": "./w29.png",
+
+
 "lives": [
-
-
-
- {
+  {
       "name": "live",
       "type": 0,
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/shifeiquan520/shifeiquan2/main/ku9.txt",
+      "url": "./tv/tv1.txt",
       "playerType": 1,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
-      "logo": "https://live.fanmingming.com/tv/{name}.png"
-    },
-    {
       "name": "live2",
       "type": 0,
-      "url": "./fjyd.m3u",
-      "playerType": 1,
-      "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
+      "url": "https://gitee.com/shifeiquan/sq/raw/master/fjyd.m3u",
       "logo": "https://live.fanmingming.com/tv/{name}.png"
-    }
-    ],
+    },
+
+{
+      "playerType": 1
+    }    ],
+
  "sites": [
  {
       "key": "️演唱",
@@ -275,7 +274,7 @@
         "科幻片",
         "恐怖片",
         "剧情片",
-            
+        "伦理片",        
         "国产剧",
         "香港剧",
         "台湾剧",
@@ -292,7 +291,7 @@
         "科幻片",
         "恐怖片",
         "剧情片",
-              
+        "伦理片",        
         "国产剧",
         "香港剧",
         "台湾剧",
