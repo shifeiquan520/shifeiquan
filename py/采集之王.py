@@ -38,7 +38,7 @@ DEFAULT_CFG = {
     "max_workers": 16,
     "max_retries": 2,
     "search_result_limit": 100,
-    "search_sources": 15,
+    "search_sources": 8,
     "line_batch": 12,
     "cache_ttl": 300,          # 秒
 
@@ -158,6 +158,17 @@ CATEGORIES = [
     '综艺', '日韩剧', '欧美剧'
 
 ]
+
+# 每个主分类的子分类（用于筛选）
+CATEGORY_SUBS = {
+    '电影': ['动作片', '喜剧片', '爱情片', '科幻片', '恐怖片', '剧情片', '战争片', '犯罪片', '悬疑片', '奇幻片', '冒险片'],
+    '国产剧': ['大陆剧', '海外剧'],
+    '港台剧': ['香港剧', '台湾剧'],
+    '动漫': ['国产动漫', '日韩动漫', '欧美动漫'],
+    '综艺': ['大陆综艺', '港台综艺', '日韩综艺', '欧美综艺'],
+    '日韩剧': ['韩国剧', '日本剧'],
+    '欧美剧': ['美剧', '英剧'],
+}
 
 
 # ========================= 源健康状态管理 =========================
@@ -428,12 +439,15 @@ class Spider(Spider):
 
 # ---------- 首页 ----------
     def homeContent(self, filter):
+        filters = {}
+        for cat, subs in CATEGORY_SUBS.items():
+            value = [{'n': '全部', 'v': ''}] + [{'n': s, 'v': s} for s in subs]
+            filters[cat] = [{'key': 'class', 'name': '类型', 'value': value}]
         result = {
             'class': [{'type_id': n, 'type_name': n} for n in self._categories],
-            'list': self._home_list()
+            'list': self._home_list(),
+            'filters': filters,
         }
-        if filter:
-            result['filters'] = {}
         return result
 
     def homeVideoContent(self):
@@ -488,6 +502,12 @@ class Spider(Spider):
             cat_name = unquote(str(tid or '')).strip()
             if not cat_name or ':' in cat_name or cat_name not in self._categories:
                 return {'list': [], 'page': 1, 'pagecount': 0, 'limit': 20, 'total': 0}
+
+            # 如果有筛选项，用子分类名替代主分类名
+            if extend and isinstance(extend, dict):
+                sub = extend.get('class', '')
+                if sub:
+                    cat_name = sub
 
             page = int(pg) if str(pg).isdigit() else 1
             # 获取所有可用源（按延迟排序）
@@ -586,7 +606,7 @@ class Spider(Spider):
 
             jobs = [(s['key'], lambda s=s: self._fetch(s, retry=False, timeout=3, ac='list', wd=key, pg=page))
                     for s in sources]
-            data = self._parallel(jobs, early_return=self.search_limit)
+            data = self._parallel(jobs, early_return=5)
 
             groups = {}
             order = []
