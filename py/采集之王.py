@@ -713,40 +713,39 @@ class Spider(Spider):
                                            timeout=self.aux_timeout,
                                            ac='detail', wd=name)] = s
 
-            # 按 self.sources 顺序收集线路
+            # 按完成顺序收集线路（哪个源先返回就先用）
             play_froms, play_urls = [], []
-            for s in all_srcs:
-                if len(play_froms) >= self.cfg['line_batch']:
-                    break
-                fut = next((f for f, src in futures.items() if src['key'] == s['key']), None)
-                if not fut:
-                    continue
-                try:
-                    j2 = fut.result(timeout=self.aux_timeout + 1)
-                    if not j2 or not j2.get('list'):
-                        continue
-                    for v2 in j2['list']:
-                        n2 = _clean(v2.get('vod_name', ''))
-                        if not _same_name(n2, name):
-                            # 放宽匹配：前10字前缀匹配兜底
-                            n2_short = _norm_name(n2)[:10]
-                            name_short = _norm_name(name)[:10]
-                            if not (n2_short and name_short and
-                                    (n2_short == name_short or
-                                     n2_short.startswith(name_short) or
-                                     name_short.startswith(n2_short))):
-                                continue
-                        f2, u2 = [], []
-                        self._collect_lines(s['key'], v2, f2, u2)
-                        if u2 and len(play_froms) < self.cfg['line_batch']:
-                            play_froms.extend(f2)
-                            play_urls.extend(u2)
+            try:
+                for fut in concurrent.futures.as_completed(futures, timeout=self.aux_timeout + 2):
+                    if len(play_froms) >= self.cfg['line_batch']:
                         break
-                except Exception:
-                    continue
-                # early_return: 有8条线路就停止请求
-                if len(play_froms) >= 8:
-                    break
+                    try:
+                        j2 = fut.result(timeout=0)
+                        if not j2 or not j2.get('list'):
+                            continue
+                        src_key = futures[fut]['key']
+                        for v2 in j2['list']:
+                            n2 = _clean(v2.get('vod_name', ''))
+                            if not _same_name(n2, name):
+                                n2_short = _norm_name(n2)[:10]
+                                name_short = _norm_name(name)[:10]
+                                if not (n2_short and name_short and
+                                        (n2_short == name_short or
+                                         n2_short.startswith(name_short) or
+                                         name_short.startswith(n2_short))):
+                                    continue
+                            f2, u2 = [], []
+                            self._collect_lines(src_key, v2, f2, u2)
+                            if u2 and len(play_froms) < self.cfg['line_batch']:
+                                play_froms.extend(f2)
+                                play_urls.extend(u2)
+                            break
+                    except Exception:
+                        continue
+                    if len(play_froms) >= 8:
+                        break
+            except TimeoutError:
+                pass
 
             play_froms, play_urls = self._deduplicate_playlists(play_froms, play_urls)
             return {'list': [self._build_detail_dict(vid, vod, play_froms, play_urls)]}
