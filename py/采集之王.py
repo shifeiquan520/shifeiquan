@@ -493,7 +493,8 @@ class Spider(Spider):
             item = self._item(v, src_key, is_search=False)
             items.append(item)
         result = items[:30]
-        self.cache.set(ck, result)
+        if result:
+            self.cache.set(ck, result)
         return result
 
     # ---------- 分类 ----------
@@ -592,8 +593,11 @@ class Spider(Spider):
                 self._cat_meta_cache[key] = {}
             self._cat_meta_cache[key][cat_name] = src_tid
             self._cat_meta_ts[key] = now
-        return self._fetch(source, retry=False, timeout=self.aux_timeout,
-                           ac='detail', t=src_tid, pg=pg)
+        result = self._fetch(source, retry=False, timeout=self.aux_timeout,
+                             ac='detail', t=src_tid, pg=pg)
+        if result and not result.get('list'):
+            return None
+        return result
 
     # ---------- 搜索 ----------
     def searchContent(self, key, quick, pg='1'):
