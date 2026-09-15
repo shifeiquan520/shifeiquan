@@ -273,11 +273,8 @@ class Spider(Spider):
         self._cat_meta_cache = {}
         self._cat_meta_ts = {}
 
-        # 启动时探测所有源
-        self._probe_all_sources()
-        
-        # 预热分类 type_id 映射
-        self._preheat_categories()
+        # 启动时探测所有源并预热分类（一次请求完成）
+        self._probe_and_preheat()
 
     # ---------- 生命周期 ----------
     def destroy(self):
@@ -301,9 +298,9 @@ class Spider(Spider):
                 self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.cfg['max_workers'])
         return self._executor
 
-    # ---------- 启动探测所有源 ----------
-    def _probe_all_sources(self):
-        """启动时同步探测所有源，标记不可用源"""
+    # ---------- 启动探测+预热（一次请求完成两件事） ----------
+    def _probe_and_preheat(self):
+        """启动时同步探测所有源并预热分类映射，每个源只请求一次"""
         def probe(src):
             key = src['key']
             try:
@@ -317,6 +314,19 @@ class Spider(Spider):
                 if r.status_code == 200:
                     with self._health_lock:
                         self.health[key].record_ok(latency)
+                    try:
+                        data = r.json()
+                        if isinstance(data, dict):
+                            with self._health_lock:
+                                self._cat_meta_cache[key] = {}
+                                for item in data.get('class', []):
+                                    cat_name = item.get('type_name', '')
+                                    type_id = item.get('type_id', '')
+                                    if cat_name and type_id:
+                                        self._cat_meta_cache[key][cat_name] = str(type_id)
+                                self._cat_meta_ts[key] = time.time()
+                    except Exception:
+                        pass
                 else:
                     with self._health_lock:
                         self.health[key].record_fail()
@@ -337,38 +347,6 @@ class Spider(Spider):
                 for h in self.health.values():
                     if h.failures >= self.cfg['source_max_failures']:
                         h.disabled = True
-
-    def _preheat_categories(self):
-        """启动时预热所有源的分类 type_id 映射"""
-        def preheat(src):
-            key = src['key']
-            try:
-                meta = self.session.get(
-                    src['api'].split('?', 1)[0],
-                    params={'ac': 'list', 'pg': 1},
-                    timeout=self.cfg['timeout'], verify=False
-                )
-                if meta.status_code == 200:
-                    data = meta.json()
-                    if isinstance(data, dict):
-                        with self._health_lock:
-                            self._cat_meta_cache[key] = {}
-                            for item in data.get('class', []):
-                                cat_name = item.get('type_name', '')
-                                type_id = item.get('type_id', '')
-                                if cat_name and type_id:
-                                    self._cat_meta_cache[key][cat_name] = str(type_id)
-                            self._cat_meta_ts[key] = time.time()
-            except Exception:
-                pass
-
-        executor = self._get_executor()
-        futures = {executor.submit(preheat, s): s for s in self.sources}
-        for fut in concurrent.futures.as_completed(futures):
-            try:
-                fut.result(timeout=self.cfg['timeout'] + 2)
-            except Exception:
-                pass
 
     def _get_alive_sources(self, limit=None):
         alive = [s for s in self.sources if not self.health[s['key']].disabled]
