@@ -95,7 +95,7 @@ DEFAULT_CFG = {
         {"key": "api.zuidapi.com", "name": "最大资源网", "api": "https://api.zuidapi.com/api.php/provide/vod/"},
         {"key": "wujin", "name": "无尽", "api": "https://api.wujinapi.cc/api.php/provide/vod/"},
         {"key": "api.guangsuapi.com", "name": "光速资源站", "api": "https://api.guangsuapi.com/api.php/provide/vod/"},
-        {"key": "api.ffzyapi.com", "name": "非凡资源网", "api": "http://api.ffzyapi.com/api.php/provide/vod/"},       
+        {"key": "api.ffzyapi.com", "name": "非凡资源网", "api": "http://api.ffzyapi.com/api.php/provide/vod/"},      
         {"key": "www.huyaapi.com", "name": "虎牙资源", "api": "https://www.huyaapi.com/api.php/provide/vod/"},
         {"key": "caiji.xgzyapi.com", "name": "西瓜", "api": "https://caiji.xgzyapi.com/api.php/provide/vod/"},
         {"key": "api.okzyw.net", "name": "OK资源", "api": "http://api.okzyw.net/api.php/provide/vod/"},
@@ -153,8 +153,8 @@ def _is_blocked(name):
 
 # 全局常用分类（可通过 cfg 覆盖）
 CATEGORIES = [
-    '电影', '国产剧', '港台剧', '动漫', '综艺' ,
-    '日韩剧', '欧美剧','短剧'
+    '电影', '国产剧', '港台剧', '动漫', '综艺',
+    '短剧', '日韩剧', '欧美剧','伦理片'
 
 ]
 
@@ -226,6 +226,9 @@ class Spider(Spider):
         return '综合采集'
 
     def init(self, extend=''):
+        # 先清理旧资源，防止重复累积
+        self.destroy()
+
         # 合并配置
         self.cfg = dict(DEFAULT_CFG)
         if isinstance(extend, dict):
@@ -290,12 +293,13 @@ class Spider(Spider):
     def destroy(self):
         try:
             if self._executor:
-                self._executor.shutdown(wait=True, cancel_futures=True)
+                self._executor.shutdown(wait=False, cancel_futures=True)
         except Exception:
             pass
         self._executor = None
         try:
-            self.session.close()
+            if self.session:
+                self.session.close()
         except Exception:
             pass
 
