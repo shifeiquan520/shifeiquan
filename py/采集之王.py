@@ -744,7 +744,7 @@ class Spider(Spider):
                             break
                     except Exception:
                         continue
-                    if len(play_froms) >= 8:
+                    if len(play_froms) >= self.cfg['line_batch']:
                         break
             except TimeoutError:
                 pass
