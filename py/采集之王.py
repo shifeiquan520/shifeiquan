@@ -154,8 +154,8 @@ def _is_blocked(name):
 
 # 全局常用分类（可通过 cfg 覆盖）
 CATEGORIES = [
-     '电影', '国产剧', '港台剧', '动漫',
-    '综艺', '日韩剧', '欧美剧','短剧'
+    '电影', '国产剧', '港台剧', '动漫', '综艺' ,
+    '日韩剧', '欧美剧','短剧'
 
 ]
 
@@ -387,9 +387,8 @@ class Spider(Spider):
                 if r.status_code == 200:
                     j = r.json()
                     if isinstance(j, dict):
-                        latency = int((time.time() - t0) * 1000)
                         with self._health_lock:
-                            self.health[source['key']].record_ok(latency)
+                            self.health[source['key']].failures = 0
                         return j
             except Exception:
                 pass
@@ -842,6 +841,15 @@ class Spider(Spider):
             if url.startswith('//'):
                 url = 'https:' + url
             header = {'User-Agent': UA}
+            # 提取域名作为 Referer（解决CDN防盗链）
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(url)
+                if parsed.scheme and parsed.hostname:
+                    referer = f"{parsed.scheme}://{parsed.hostname}/"
+                    header['Referer'] = referer
+            except Exception:
+                pass
             if _is_direct(url, self.allowed_exts):
                 return {'parse': 0, 'playUrl': '', 'url': url, 'header': header}
             return {'parse': 1, 'playUrl': '', 'url': url, 'header': header}
