@@ -2,6 +2,17 @@
 // 参数：id=频道名称（例如 cctv1, cctv2, bjws 等）
 // 支持频道：cctv1~cctv17, cctv4k, cctv8k, cgtn系列, 各地方卫视等
 
+// ---------- 1. 适配ku9.request ----------
+var HttpBridge = {
+    fetchWithHeaders: function(url, headers) {
+        var resp = ku9.request(url, 'GET', headers, null, true);
+        if (resp && resp.code === 200) {
+            return resp.body;
+        }
+        return null;
+    }
+};
+
 // ---------- 2. 嵌入原压缩代码（会自动解压并定义 getPlayUrl） ----------
 // 注意：以下为原始压缩代码，执行后会在全局作用域生成 getPlayUrl 函数
 
