@@ -9,6 +9,7 @@ import re
 import time
 import warnings
 import concurrent.futures
+import threading
 from threading import Lock
 from urllib.parse import unquote
 from itertools import zip_longest
@@ -312,9 +313,9 @@ class Spider(Spider):
                 self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.cfg['max_workers'])
         return self._executor
 
-    # ---------- 启动探测+预热（一次请求完成两件事） ----------
+    # ---------- 启动探测+预热（后台线程，不阻塞 init） ----------
     def _probe_and_preheat(self):
-        """启动时同步探测所有源并预热分类映射，每个源只请求一次"""
+        """后台探测所有源并预热分类映射，init() 不等待"""
         def probe(src):
             key = src['key']
             try:
@@ -348,27 +349,31 @@ class Spider(Spider):
                 with self._health_lock:
                     self.health[key].record_fail()
 
-        executor = self._get_executor()
-        futures = {executor.submit(probe, s): s for s in self.sources}
-        for fut in concurrent.futures.as_completed(futures):
-            try:
-                fut.result(timeout=self.cfg['timeout'] + 2)
-            except Exception:
-                pass
+        def _finalize():
+            executor = self._get_executor()
+            futures = {executor.submit(probe, s): s for s in self.sources}
+            for fut in concurrent.futures.as_completed(futures):
+                try:
+                    fut.result(timeout=self.cfg['timeout'] + 2)
+                except Exception:
+                    pass
 
-        if self.cfg['auto_disable_dead']:
+            if self.cfg['auto_disable_dead']:
+                with self._health_lock:
+                    for h in self.health.values():
+                        if h.failures >= self.cfg['source_max_failures']:
+                            h.disabled = True
+
+            # 预热别名映射：把"动作片"→"电影"等也存进缓存
             with self._health_lock:
-                for h in self.health.values():
-                    if h.failures >= self.cfg['source_max_failures']:
-                        h.disabled = True
+                for key, meta in self._cat_meta_cache.items():
+                    for cat_name, type_id in list(meta.items()):
+                        mapped = self.aliases.get(cat_name, '')
+                        if mapped and mapped != cat_name and mapped not in meta:
+                            meta[mapped] = type_id
 
-        # 预热别名映射：把"动作片"→"电影"等也存进缓存
-        with self._health_lock:
-            for key, meta in self._cat_meta_cache.items():
-                for cat_name, type_id in list(meta.items()):
-                    mapped = self.aliases.get(cat_name, '')
-                    if mapped and mapped != cat_name and mapped not in meta:
-                        meta[mapped] = type_id
+        t = threading.Thread(target=_finalize, daemon=True)
+        t.start()
 
     def _get_alive_sources(self, limit=None):
         alive = [s for s in self.sources if not self.health[s['key']].disabled]
