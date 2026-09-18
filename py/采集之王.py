@@ -81,7 +81,7 @@ DEFAULT_CFG = {
         # 欧美剧
         "欧美剧": "欧美剧", "美剧": "欧美剧", "英剧": "欧美剧",
 
-       
+      
     },
 
     # 源列表（硬编码固定源）
@@ -281,8 +281,8 @@ class Spider(Spider):
         self._cat_meta_cache = {}
         self._cat_meta_ts = {}
 
-        # 启动时探测所有源并预热分类（一次请求完成）
-        self._probe_and_preheat()
+        # 探测标记（首次 homeContent 时触发）
+        self._probed = False
 
     # ---------- 生命周期 ----------
     def destroy(self):
@@ -447,6 +447,9 @@ class Spider(Spider):
 
 # ---------- 首页 ----------
     def homeContent(self, filter):
+        if not self._probed:
+            self._probed = True
+            self._probe_and_preheat()
         filters = {}
         for cat, subs in CATEGORY_SUBS.items():
             value = [{'n': '全部', 'v': ''}] + [{'n': s, 'v': s} for s in subs]
@@ -459,6 +462,9 @@ class Spider(Spider):
         return result
 
     def homeVideoContent(self):
+        if not self._probed:
+            self._probed = True
+            self._probe_and_preheat()
         return {'list': self._home_list()}
 
     def _home_list(self):
