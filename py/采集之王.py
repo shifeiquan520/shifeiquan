@@ -281,7 +281,7 @@ class Spider(Spider):
         self._cat_meta_cache = {}
         self._cat_meta_ts = {}
 
-        # 探测标记（首次 homeContent 时触发）
+        # 探测标记（首次 categoryContent 时触发）
         self._probed = False
 
     # ---------- 生命周期 ----------
@@ -447,9 +447,6 @@ class Spider(Spider):
 
 # ---------- 首页 ----------
     def homeContent(self, filter):
-        if not self._probed:
-            self._probed = True
-            self._probe_and_preheat()
         filters = {}
         for cat, subs in CATEGORY_SUBS.items():
             value = [{'n': '全部', 'v': ''}] + [{'n': s, 'v': s} for s in subs]
@@ -462,9 +459,6 @@ class Spider(Spider):
         return result
 
     def homeVideoContent(self):
-        if not self._probed:
-            self._probed = True
-            self._probe_and_preheat()
         return {'list': self._home_list()}
 
     def _home_list(self):
@@ -514,6 +508,9 @@ class Spider(Spider):
     # ---------- 分类 ----------
     def categoryContent(self, tid, pg, filter, extend):
         try:
+            if not self._probed:
+                self._probed = True
+                self._probe_and_preheat()
             cat_name = unquote(str(tid or '')).strip()
             if not cat_name or ':' in cat_name or cat_name not in self._categories:
                 return {'list': [], 'page': 1, 'pagecount': 0, 'limit': 20, 'total': 0}
