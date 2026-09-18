@@ -362,6 +362,14 @@ class Spider(Spider):
                     if h.failures >= self.cfg['source_max_failures']:
                         h.disabled = True
 
+        # 预热别名映射：把"动作片"→"电影"等也存进缓存
+        with self._health_lock:
+            for key, meta in self._cat_meta_cache.items():
+                for cat_name, type_id in list(meta.items()):
+                    mapped = self.aliases.get(cat_name, '')
+                    if mapped and mapped != cat_name and mapped not in meta:
+                        meta[mapped] = type_id
+
     def _get_alive_sources(self, limit=None):
         alive = [s for s in self.sources if not self.health[s['key']].disabled]
         # 按延迟排序（低优先）
