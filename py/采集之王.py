@@ -9,6 +9,7 @@ import re
 import time
 import warnings
 import concurrent.futures
+import threading
 from threading import Lock
 from urllib.parse import unquote
 from itertools import zip_longest
@@ -81,7 +82,12 @@ DEFAULT_CFG = {
         # 欧美剧
         "欧美剧": "欧美剧", "美剧": "欧美剧", "英剧": "欧美剧",
 
-      
+        # 伦理片（补充细分）
+        "伦理片": "伦理片",
+        "日韩伦理": "伦理片",
+        "三级伦理": "伦理片",
+        "三级片": "伦理片",
+        "大陆伦理": "伦理片",
     },
 
     # 源列表（硬编码固定源）
@@ -149,7 +155,7 @@ def _is_blocked(name):
 # 全局常用分类（可通过 cfg 覆盖）
 CATEGORIES = [
     '电影', '国产剧', '港台剧', '动漫', '综艺',
-    '短剧', '日韩剧', '欧美剧'
+    '短剧', '日韩剧', '欧美剧','伦理片'
 
 ]
 
@@ -243,10 +249,6 @@ class Spider(Spider):
         else:
             self.sources = list(self.cfg['sources'])
 
-        # 按延迟阈值过滤慢源
-        if max_ms > 0:
-            self.sources = [s for s in self.sources if s.get('latency_ms', 0) <= max_ms]
-
         # 运行时状态
         self.timeout = self.cfg['timeout']
         self.aux_timeout = self.cfg['aux_timeout']
@@ -281,8 +283,12 @@ class Spider(Spider):
         self._cat_meta_cache = {}
         self._cat_meta_ts = {}
 
-        # 探测标记（首次 categoryContent 时触发）
-        self._probed = False
+        # 后台探测线程
+        self._probe_done = threading.Event()
+        def _bg_probe():
+            self._probe_and_preheat()
+            self._probe_done.set()
+        threading.Thread(target=_bg_probe, daemon=True).start()
 
     # ---------- 生命周期 ----------
     def destroy(self):
@@ -508,9 +514,7 @@ class Spider(Spider):
     # ---------- 分类 ----------
     def categoryContent(self, tid, pg, filter, extend):
         try:
-            if not self._probed:
-                self._probed = True
-                self._probe_and_preheat()
+            self._probe_done.wait(timeout=5)
             cat_name = unquote(str(tid or '')).strip()
             if not cat_name or ':' in cat_name or cat_name not in self._categories:
                 return {'list': [], 'page': 1, 'pagecount': 0, 'limit': 20, 'total': 0}
