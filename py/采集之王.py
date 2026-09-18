@@ -9,7 +9,6 @@ import re
 import time
 import warnings
 import concurrent.futures
-import threading
 from threading import Lock
 from urllib.parse import unquote
 from itertools import zip_longest
@@ -82,12 +81,7 @@ DEFAULT_CFG = {
         # 欧美剧
         "欧美剧": "欧美剧", "美剧": "欧美剧", "英剧": "欧美剧",
 
-        # 伦理片（补充细分）
-        "伦理片": "伦理片",
-        "日韩伦理": "伦理片",
-        "三级伦理": "伦理片",
-        "三级片": "伦理片",
-        "大陆伦理": "伦理片",
+       
     },
 
     # 源列表（硬编码固定源）
@@ -313,9 +307,9 @@ class Spider(Spider):
                 self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.cfg['max_workers'])
         return self._executor
 
-    # ---------- 启动探测+预热（后台线程，不阻塞 init） ----------
+    # ---------- 启动探测+预热（同步，init 阻塞等待完成） ----------
     def _probe_and_preheat(self):
-        """后台探测所有源并预热分类映射，init() 不等待"""
+        """同步探测所有源并预热分类映射，完成后 init() 才返回"""
         def probe(src):
             key = src['key']
             try:
@@ -323,7 +317,7 @@ class Spider(Spider):
                 r = self.session.get(
                     src['api'].split('?', 1)[0],
                     params={'ac': 'list', 'pg': 1},
-                    timeout=self.cfg['timeout'], verify=False
+                    timeout=3, verify=False
                 )
                 latency = int((time.time() - t0) * 1000)
                 if r.status_code == 200:
@@ -354,7 +348,7 @@ class Spider(Spider):
             futures = {executor.submit(probe, s): s for s in self.sources}
             for fut in concurrent.futures.as_completed(futures):
                 try:
-                    fut.result(timeout=self.cfg['timeout'] + 2)
+                    fut.result(timeout=5)
                 except Exception:
                     pass
 
@@ -372,8 +366,7 @@ class Spider(Spider):
                         if mapped and mapped != cat_name and mapped not in meta:
                             meta[mapped] = type_id
 
-        t = threading.Thread(target=_finalize, daemon=True)
-        t.start()
+        _finalize()
 
     def _get_alive_sources(self, limit=None):
         alive = [s for s in self.sources if not self.health[s['key']].disabled]
