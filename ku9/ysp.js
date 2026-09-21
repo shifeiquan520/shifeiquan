@@ -37,7 +37,7 @@ function main(item) {
     if (!playseek) {
         var cached = ku9.getCache(cacheKey);
         if (cached && cached.url && cached.url.indexOf('http') === 0) {
-            return { url: cached.url, headers: {"User-Agent": "qqlive"}, ijkad: 2000000 };
+            return { url: cached.url, headers: {"User-Agent": "qqlive"}, player: 1 };
         }
     }
 
@@ -68,7 +68,7 @@ function main(item) {
                 // 缓存110秒（atime=86400但服务端可能提前过期，留10秒余量）
                 ku9.setCache(cacheKey, { url: resolvedUrl }, 110000);
             }
-            return { url: resolvedUrl, headers: {"User-Agent": "qqlive"}, ijkad: 2000000 };
+            return { url: resolvedUrl, headers: {"User-Agent": "qqlive"}, player: 1 };
         }
     } catch (e) {
         // 忽略异常
