@@ -82,7 +82,7 @@ DEFAULT_CFG = {
         # 欧美剧
         "欧美剧": "欧美剧", "美剧": "欧美剧", "英剧": "欧美剧",
 
-       
+      
     },
 
     # 源列表（硬编码固定源）
@@ -289,7 +289,10 @@ class Spider(Spider):
     def destroy(self):
         try:
             if self._executor:
-                self._executor.shutdown(wait=False, cancel_futures=True)
+                try:
+                    self._executor.shutdown(wait=False, cancel_futures=True)
+                except TypeError:
+                    self._executor.shutdown(wait=False)
         except Exception:
             pass
         self._executor = None
@@ -308,7 +311,7 @@ class Spider(Spider):
                 self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.cfg['max_workers'])
         return self._executor
 
-    # ---------- 启动探测+预热（同步，init 阻塞等待完成） ----------
+    # ---------- 后台探测+预热 ----------
     def _probe_and_preheat(self):
         """同步探测所有源并预热分类映射，完成后 init() 才返回"""
         def probe(src):
@@ -468,6 +471,9 @@ class Spider(Spider):
         if cached is not None:
             return cached
 
+        # 定期清理过期缓存
+        self.cache.clear_expired()
+
         # 获取所有可用源（按延迟排序）
         alive = self._get_alive_sources()
         if not alive:
@@ -509,7 +515,8 @@ class Spider(Spider):
     # ---------- 分类 ----------
     def categoryContent(self, tid, pg, filter, extend):
         try:
-            self._probe_done.wait(timeout=5)
+            if hasattr(self, "_probe_done"):
+                self._probe_done.wait(timeout=5)
             cat_name = unquote(str(tid or '')).strip()
             if not cat_name or ':' in cat_name or cat_name not in self._categories:
                 return {'list': [], 'page': 1, 'pagecount': 0, 'limit': 20, 'total': 0}
