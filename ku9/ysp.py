@@ -754,7 +754,11 @@ class Parser(Parser):
 
             # 缓存并返回
             self._set_cached_playurl(cache_key, new_playurl)
-            return {"url": new_playurl, "headers": {"User-Agent": "qqlive"}}
+            return {
+                "url": new_playurl, 
+                "headers": {"User-Agent": "qqlive", "Referer": "https://vip.cntv.cn/"},
+                "player": 1
+            }
 
     def proxy(self, url, headers):
         """代理方法（未使用）"""
