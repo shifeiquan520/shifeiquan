@@ -109,7 +109,7 @@ CHANNELS = {
 }
 
 # 缓存相关配置（沿用原逻辑）
-CACHE_TTL = 600  # 10分钟
+CACHE_TTL = 90  # 10分钟
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
 if not os.path.exists(CACHE_DIR):
     os.makedirs(CACHE_DIR, 0o755, True)
