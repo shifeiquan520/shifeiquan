@@ -3,12 +3,19 @@
 """
 红果短剧 TVBox / OK影视 / 影视仓 Python 源。
 
+站点说明（2026 实测）：
+- /category 会忽略所有 query 参数，只有路径 /category/{type}[/{slug}] 才生效。
+- 内容类型：real-drama 真人剧、comic-drama 漫剧、ai-drama AI剧、comic 漫画。
+- 分页参数为 ?page=N（pg 无效）。
+- 首页 loaderData.page.homeSections 内为多组 video_list（字段是 series_title）。
+- 列表 /category 的 recommendList 字段是 series_name。
+- 播放页为受保护播放（protectedPlayback），SSR 无 main_url，只能回退 parse=1 走通用解析。
+
 合并优化点：
-1. 参考模板动态读取红果官网 selectorList，自动生成标准筛选器。
-2. 保留底部分类入口：热门短剧、全部短剧、官网背景分类。
-3. 不依赖播放桥，播放时直接解析官方播放器页 video_player_info.main_url。
-4. 只展示官网网页端当前可访问的集数，避免后续未开放集数点开 404 黑屏。
-5. 播放直链失败时回退 parse=1，交给 OK影视/影视仓通用解析。
+1. 4 个内容类型作为一级分类，题材筛选动态读取官网 selectorList。
+2. 分类一律使用路径式 URL，分页用 page 参数，避免各分类显示同一份数据。
+3. 播放直链失败时回退 parse=1，交给 OK影视/影视仓 通用解析。
+4. 只展示官网网页端当前可访问的集数，避免未开放集数点开 404 黑屏。
 """
 
 import json
@@ -29,6 +36,45 @@ except ImportError:
         pass
 
 
+CATEGORIES = [
+    ("real-drama", "真人剧", "/category/real-drama"),
+    ("comic-drama", "漫剧", "/category/comic-drama"),
+    ("ai-drama", "AI剧", "/category/ai-drama"),
+    ("comic", "漫画", "/category/comic"),
+]
+CATEGORY_MAP = {tid: path for tid, _name, path in CATEGORIES}
+
+STATIC_TOPICS = {
+    "real-drama": [
+        {"n": "爱情", "v": "romance"}, {"n": "年代", "v": "period"},
+        {"n": "逆袭", "v": "comeback"}, {"n": "传奇", "v": "legend"},
+        {"n": "成长", "v": "growth"}, {"n": "家庭", "v": "family"},
+        {"n": "家族", "v": "clan"}, {"n": "萌宝", "v": "cute-kids"},
+        {"n": "悬疑", "v": "suspense"}, {"n": "惊悚", "v": "thriller"},
+        {"n": "恐怖", "v": "horror"}, {"n": "志怪", "v": "supernatural"},
+        {"n": "古装", "v": "costume"}, {"n": "玄幻", "v": "fantasy"},
+        {"n": "奇幻", "v": "wonder"}, {"n": "都市", "v": "urban"},
+        {"n": "青春", "v": "youth"}, {"n": "喜剧", "v": "comedy"},
+        {"n": "科幻", "v": "sci-fi"}, {"n": "灾难", "v": "disaster"},
+        {"n": "动作冒险", "v": "action-adventure"}, {"n": "战争", "v": "war"},
+        {"n": "综艺", "v": "variety"}, {"n": "剧情", "v": "drama"},
+    ],
+    "comic-drama": [
+        {"n": "脑洞", "v": "creative"}, {"n": "玄幻", "v": "fantasy"},
+        {"n": "剧情", "v": "drama"}, {"n": "末世", "v": "apocalypse"},
+        {"n": "豪门", "v": "wealthy-family"}, {"n": "奇幻", "v": "wonder"},
+        {"n": "科幻", "v": "sci-fi"}, {"n": "冒险", "v": "adventure"},
+    ],
+    "ai-drama": [
+        {"n": "脑洞", "v": "creative"}, {"n": "玄幻", "v": "fantasy"},
+        {"n": "剧情", "v": "drama"}, {"n": "末世", "v": "apocalypse"},
+        {"n": "豪门", "v": "wealthy-family"}, {"n": "奇幻", "v": "wonder"},
+        {"n": "科幻", "v": "sci-fi"}, {"n": "冒险", "v": "adventure"},
+    ],
+    "comic": [],
+}
+
+
 class Spider(Spider):
     def __init__(self):
         self.host = "https://hongguoduanju.com"
@@ -43,7 +89,7 @@ class Spider(Spider):
             "Accept-Language": "zh-CN,zh;q=0.9",
         }
         self.timeout = 20
-        self.page_size = 30
+        self.page_size = 24
         self._cache = {}
         self.class_list = []
         self.search_pool = []
@@ -64,39 +110,28 @@ class Spider(Spider):
         return
 
     def homeContent(self, filter):
-        data = self._router_data(self.host + "/category?sort_type=1") or {}
-        page = self._pick_page(data, "category_page")
-        selector_list = page.get("selectorList") or []
-        filters = self._build_filters(selector_list)
-
         classes = [
-            {"type_id": "home", "type_name": "热门短剧"},
-            {"type_id": "all", "type_name": "全部短剧"},
+            {"type_id": tid, "type_name": name}
+            for tid, name, _path in CATEGORIES
         ]
-
-        if selector_list:
-            for item in selector_list[0].get("items", []):
-                name = item.get("show_name")
-                value = item.get("selector_item_id")
-                if name and value:
-                    classes.append({"type_id": str(value), "type_name": str(name)})
-
         self.class_list = classes
         result = {
             "class": classes,
             "list": self.homeVideoContent().get("list", []),
         }
         if filter:
-            result["filters"] = filters
+            result["filters"] = self._build_filters()
         return result
 
     def homeVideoContent(self):
         try:
             data = self._router_data(self.host + "/") or {}
             page = self._pick_page(data, "page")
-            videos = page.get("videoList") or []
+            videos = []
+            for section in page.get("homeSections") or []:
+                videos.extend(section.get("video_list") or [])
             if not videos:
-                videos, _ = self._category_items({"sort_type": "1"})
+                videos, _pages, _size = self._category_items("/category/real-drama", 1)
             return {"list": self._vod_list(videos[:self.page_size])}
         except Exception as exc:
             print("红果首页读取失败:", exc)
@@ -105,22 +140,13 @@ class Spider(Spider):
     def categoryContent(self, tid, pg, filter, extend):
         page_num = self._safe_int(pg, 1)
         try:
-            if str(tid) == "home":
-                data = self._router_data(self.host + "/") or {}
-                page = self._pick_page(data, "page")
-                videos = page.get("videoList") or []
-                if not videos:
-                    videos, api_pagecount = self._category_items({"sort_type": "1"}, page_num)
-            else:
-                query = self._category_query(tid, extend or {})
-                videos, api_pagecount = self._category_items(query, page_num)
-
-            # 直接使用 API 返回的当前页数据，不再本地切片
-            pagecount = api_pagecount if api_pagecount > 0 else 1
+            path = self._category_path(tid, extend or {})
+            videos, total_pages, page_size = self._category_items(path, page_num)
+            pagecount = total_pages if total_pages > 0 else 1
             return {
                 "page": page_num,
                 "pagecount": pagecount,
-                "limit": self.page_size,
+                "limit": page_size if page_size > 0 else self.page_size,
                 "total": len(videos),
                 "list": self._vod_list(videos),
             }
@@ -199,7 +225,7 @@ class Spider(Spider):
                 if not sid or sid in exists:
                     continue
                 text = " ".join([
-                    str(item.get("series_name") or ""),
+                    str(item.get("series_name") or item.get("series_title") or ""),
                     str(item.get("series_intro") or ""),
                     " ".join([str(x) for x in (item.get("tags") or [])]),
                 ]).lower()
@@ -260,6 +286,7 @@ class Spider(Spider):
         except Exception as exc:
             print("红果直链解析失败，尝试通用解析:", exc)
 
+        # 站点已改为受保护播放（protectedPlayback），SSR 不再提供直链，回退通用解析
         return {
             "parse": 1,
             "playUrl": "",
@@ -282,8 +309,7 @@ class Spider(Spider):
         response.raise_for_status()
         response.encoding = "utf-8"
 
-        # 站点现在用 _ROUTER_DATA = {...}; 而非 window._ROUTER_DATA
-        # 需要匹配平衡的大括号，避免贪婪/非贪婪截断
+        # 站点用 _ROUTER_DATA = {...}; 需匹配平衡的大括号，避免贪婪/非贪婪截断
         text = response.text
         m = re.search(r"_ROUTER_DATA\s*=\s*", text)
         if not m:
@@ -331,78 +357,69 @@ class Spider(Spider):
                 return value
         return {}
 
-    def _build_filters(self, selector_list):
-        key_map = {
-            1: ("background", "背景"),
-            2: ("topic", "主题"),
-            3: ("setting", "设定"),
-            4: ("gender", "受众"),
-            5: ("time", "时间"),
-            6: ("sort_type", "排序"),
-        }
-
-        values = []
-        for row in selector_list or []:
-            row_id = row.get("row_id")
-            key, name = key_map.get(row_id, ("row_%s" % row_id, row.get("row_name") or "筛选"))
-            value = [{"n": "全部", "v": ""}]
-            for item in row.get("items") or []:
-                n = item.get("show_name")
-                v = item.get("selector_item_id")
-                if n and v is not None:
-                    value.append({"n": str(n), "v": str(v)})
-            if len(value) > 1:
-                values.append({"key": key, "name": name, "value": value})
-
-        filters = {"home": values, "all": values}
-        for cls in self.class_list:
-            tid = cls.get("type_id")
-            if tid:
-                filters[str(tid)] = values
-        if selector_list:
-            for item in selector_list[0].get("items", []):
-                tid = item.get("selector_item_id")
-                if tid:
-                    filters[str(tid)] = values
+    def _build_filters(self):
+        filters = {}
+        for tid, _name, _path in CATEGORIES:
+            topics = self._type_topics(tid)
+            if topics:
+                filters[tid] = [{
+                    "key": "topic",
+                    "name": "分类",
+                    "value": [{"n": "全部", "v": ""}] + topics,
+                }]
+            else:
+                filters[tid] = []
         return filters
 
-    def _category_query(self, tid, extend):
-        query = {}
+    def _type_topics(self, tid):
+        try:
+            data = self._router_data(self.host + "/category/" + tid) or {}
+            page = self._pick_page(data, "category_page")
+            topics = []
+            for row in page.get("selectorList") or []:
+                for item in row.get("items") or []:
+                    n = item.get("show_name")
+                    v = item.get("selector_item_id")
+                    if n and v is not None:
+                        topics.append({"n": str(n), "v": str(v)})
+            if topics:
+                return topics
+        except Exception:
+            pass
+        return STATIC_TOPICS.get(tid, [])
+
+    def _category_path(self, tid, extend):
+        tid = str(tid or "")
+        if tid in CATEGORY_MAP:
+            base = CATEGORY_MAP[tid]
+        elif re.match(r"^[A-Za-z0-9_-]+$", tid) and tid not in ("", "home", "all"):
+            base = CATEGORY_MAP["real-drama"]
+        else:
+            base = CATEGORY_MAP["real-drama"]
+
         data = extend if isinstance(extend, dict) else {}
-        for key in ("background", "topic", "setting", "gender", "time", "sort_type"):
+        slug = ""
+        for key in ("topic", "background", "category"):
             value = data.get(key)
             if value is not None and str(value) != "":
-                query[key] = str(value)
+                slug = str(value).strip()
+                break
 
-        tid = str(tid or "")
-        if tid == "all":
-            if not query.get("sort_type"):
-                query["sort_type"] = "1"
-            return query
+        if not slug and tid not in CATEGORY_MAP and re.match(r"^[A-Za-z0-9_-]+$", tid):
+            slug = tid
 
-        if tid.startswith("cate_") and not query.get("background"):
-            query["background"] = tid
-        elif "=" in tid:
-            key, value = tid.split("=", 1)
-            if key and value:
-                query[key] = value
+        if slug.startswith("cate_"):
+            slug = slug[len("cate_"):]
+        if slug and not re.match(r"^[A-Za-z0-9_-]+$", slug):
+            slug = ""
 
-        if not query.get("sort_type"):
-            query["sort_type"] = "1"
-        return query
+        return base + (("/" + slug) if slug else "")
 
-    def _category_items(self, query, page=1):
-        if isinstance(query, dict):
-            q = dict(query)
-            q["pg"] = str(page)
-            url = self.host + "/category"
-            if q:
-                url += "?" + urlencode(q)
-        else:
-            text = str(query or "")
-            url = self.host + "/category" + (("?" + text) if text else "")
-            if "pg=" not in url:
-                url += ("&" if "?" in url else "?") + "pg=" + str(page)
+    def _category_items(self, path, page=1):
+        url = self.host + (path or "/category/real-drama")
+        page = self._safe_int(page, 1)
+        if page > 1:
+            url += "?" + urlencode({"page": page})
 
         data = self._router_data(url) or {}
         page_data = self._pick_page(data, "category_page")
@@ -412,9 +429,9 @@ class Spider(Spider):
             if isinstance(category_data, dict):
                 items = category_data.get("recommendList") or []
 
-        # 从 pagination 获取总页数
-        pagination = page_data.get("pagination", {})
-        total_pages = int(pagination.get("totalPages", 0) or 0)
+        pagination = page_data.get("pagination") or {}
+        total_pages = self._safe_int(pagination.get("totalPages"), 0)
+        page_size = self._safe_int(pagination.get("pageSize"), 0)
 
         seen = set()
         result = []
@@ -423,7 +440,7 @@ class Spider(Spider):
             if sid and sid not in seen:
                 seen.add(sid)
                 result.append(item)
-        return result, total_pages
+        return result, total_pages, page_size
 
     def _vod_list(self, videos):
         result = []
@@ -443,7 +460,7 @@ class Spider(Spider):
 
             result.append({
                 "vod_id": sid,
-                "vod_name": item.get("series_name") or "",
+                "vod_name": item.get("series_name") or item.get("series_title") or "",
                 "vod_pic": (
                     item.get("series_cover")
                     or item.get("background_cover")
@@ -460,17 +477,32 @@ class Spider(Spider):
             return self.search_pool
 
         pool = []
-        for url, preferred, key in [
-            (self.host + "/", "page", "videoList"),
-            (self.host + "/category?sort_type=1", "category_page", "recommendList"),
-            (self.host + "/category?sort_type=2", "category_page", "recommendList"),
-        ]:
-            try:
-                data = self._router_data(url) or {}
-                page = self._pick_page(data, preferred)
-                pool.extend(page.get(key) or [])
-            except Exception:
-                pass
+        seen = set()
+
+        def add(items):
+            for item in items or []:
+                sid = str(item.get("series_id") or "")
+                if sid and sid not in seen:
+                    seen.add(sid)
+                    pool.append(item)
+
+        try:
+            data = self._router_data(self.host + "/") or {}
+            page = self._pick_page(data, "page")
+            for section in page.get("homeSections") or []:
+                add(section.get("video_list") or [])
+        except Exception:
+            pass
+
+        for _tid, _name, path in CATEGORIES:
+            for page_no in (1, 2, 3):
+                url = self.host + path + (("?page=" + str(page_no)) if page_no > 1 else "")
+                try:
+                    data = self._router_data(url) or {}
+                    page_data = self._pick_page(data, "category_page")
+                    add(page_data.get("recommendList") or [])
+                except Exception:
+                    pass
 
         self.search_pool = pool
         return pool
