@@ -1,21 +1,21 @@
 # coding=utf-8
 # !/usr/bin/python
 """
-红果短剧 TVBox / OK影视 / 影视仓 Python 源。
+红果短剧 TVBox / OK影视 / 影视仓 Python 源（混合版 2026）。
 
-站点说明（2026 实测）：
-- /category 会忽略所有 query 参数，只有路径 /category/{type}[/{slug}] 才生效。
+数据层：官方 https://hongguoduanju.com
+- /category 忽略 query，仅路径 /category/{type}[/{slug}] 生效；分页用 ?page=N。
 - 内容类型：real-drama 真人剧、comic-drama 漫剧、ai-drama AI剧、comic 漫画。
-- 分页参数为 ?page=N（pg 无效）。
-- 首页 loaderData.page.homeSections 内为多组 video_list（字段是 series_title）。
+- 首页 loaderData.page.homeSections 内为分组 video_list（字段 series_title）。
 - 列表 /category 的 recommendList 字段是 series_name。
-- 播放页为受保护播放（protectedPlayback），SSR 无 main_url，只能回退 parse=1 走通用解析。
+- 详情 /detail?series_id= 内 seriesDetail 含 vid_list / episode_cnt / accessible_episode_cnt。
 
-合并优化点：
-1. 4 个内容类型作为一级分类，题材筛选动态读取官网 selectorList。
-2. 分类一律使用路径式 URL，分页用 page 参数，避免各分类显示同一份数据。
-3. 播放直链失败时回退 parse=1，交给 OK影视/影视仓 通用解析。
-4. 只展示官网网页端当前可访问的集数，避免未开放集数点开 404 黑屏。
+播放层：官方免费集优先，超出免费集用聚合站补全集
+- 官方受保护播放接口：POST /api/video/protected/play-info（免费集返回签名直链，超出即 403）。
+- 聚合站（苹果CMS/conch，hongguoapp.cn）：按剧名解析出全集直连 m3u8（AES-128 HLS）。
+- 全失败回退 parse=1，交给 OK影视/影视仓 通用解析。
+
+搜索：官方 suggestion 优先 → 聚合站 → 本地池。
 """
 
 import json
@@ -26,6 +26,11 @@ import time
 from urllib.parse import quote, urlencode
 
 import requests
+
+try:
+    requests.packages.urllib3.disable_warnings()
+except Exception:
+    pass
 
 sys.path.append("..")
 sys.path.append("../../")
@@ -74,23 +79,42 @@ STATIC_TOPICS = {
     "comic": [],
 }
 
+UA = ("Mozilla/5.0 (Linux; Android 12; TV) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/126.0 Safari/537.36")
+
+# 聚合站（苹果CMS / conch 模板），按剧名解析全集 m3u8
+AGG_HOST = "https://www.hongguoapp.cn"
+AGG_SEARCH = "/vodsearch/-------------.html?wd=%s"
+
 
 class Spider(Spider):
     def __init__(self):
         self.host = "https://hongguoduanju.com"
+        self.agg_host = AGG_HOST
         self.headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Linux; Android 12; TV) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/126.0 Safari/537.36"
-            ),
+            "User-Agent": UA,
             "Referer": self.host + "/",
             "Origin": self.host,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9",
+        }
+        self.json_headers = {
+            "User-Agent": UA,
+            "Referer": self.host + "/",
+            "Origin": self.host,
+            "X-Xs-From-Web": "1",
+            "Accept": "application/json, text/plain, */*",
+        }
+        self.agg_headers = {
+            "User-Agent": UA,
+            "Referer": self.agg_host + "/",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "zh-CN,zh;q=0.9",
         }
         self.timeout = 20
         self.page_size = 24
         self._cache = {}
+        self._agg_cache = {}
         self.class_list = []
         self.search_pool = []
 
@@ -109,9 +133,9 @@ class Spider(Spider):
     def destroy(self):
         return
 
+    # ---------------------------------------------------------------- 首页/分类
     def homeContent(self, filter):
-        classes = [{"type_id": "home", "type_name": "推荐"}]
-        classes += [
+        classes = [
             {"type_id": tid, "type_name": name}
             for tid, name, _path in CATEGORIES
         ]
@@ -141,16 +165,6 @@ class Spider(Spider):
     def categoryContent(self, tid, pg, filter, extend):
         page_num = self._safe_int(pg, 1)
         try:
-            if str(tid) == "home":
-                videos = self.homeVideoContent().get("list", [])
-                return {
-                    "page": page_num,
-                    "pagecount": 1,
-                    "limit": self.page_size,
-                    "total": len(videos),
-                    "list": videos,
-                }
-
             path = self._category_path(tid, extend or {})
             videos, total_pages, page_size = self._category_items(path, page_num)
 
@@ -175,152 +189,463 @@ class Spider(Spider):
             print("红果分类读取失败:", exc)
             return {"list": [], "page": page_num, "pagecount": page_num}
 
+    # ---------------------------------------------------------------- 详情
     def detailContent(self, ids):
         sid = ids[0] if isinstance(ids, list) else ids
+        sid = str(sid or "")
         try:
-            data = self._router_data(self.host + "/detail?series_id=" + quote(str(sid))) or {}
-            page = self._pick_page(data, "detail_page")
-            detail = page.get("seriesDetail") or {}
-            if not detail:
-                return {"list": []}
-
-            sid = str(detail.get("series_id") or sid)
-            name = detail.get("series_name") or ""
-            pic = detail.get("series_cover") or ""
-            intro = detail.get("series_intro") or ""
-            tags = detail.get("tags") or []
-
-            actors = []
-            for item in detail.get("celebrities") or []:
-                actor = item.get("nickname") or ""
-                role = item.get("sub_title") or ""
-                if actor:
-                    actors.append(actor + ((" " + role) if role else ""))
-
-            vids = [str(x) for x in (detail.get("vid_list") or []) if str(x)]
-            total = self._safe_int(detail.get("episode_cnt") or len(vids), len(vids))
-            accessible_count = self._safe_int(detail.get("accessible_episode_cnt") or 0, 0)
-            if accessible_count <= 0 or accessible_count > len(vids):
-                accessible_count = len(vids)
-
-            playable_vids = vids[:accessible_count]
-            play_urls = [
-                "第%s集$%s|%s" % (index, sid, vid)
-                for index, vid in enumerate(playable_vids, 1)
-            ]
-
-            tag_text = " / ".join([str(x) for x in tags[:4]]) if isinstance(tags, list) else str(tags)
-            remark = "可播%s集/全%s集" % (len(playable_vids), total) if total else ""
-
-            vod = {
-                "vod_id": sid,
-                "vod_name": name,
-                "vod_pic": pic,
-                "type_name": tag_text,
-                "vod_year": "",
-                "vod_area": "大陆",
-                "vod_remarks": remark,
-                "vod_actor": " / ".join(actors),
-                "vod_director": "",
-                "vod_content": intro,
-                "vod_play_from": "红果直连",
-                "vod_play_url": "#".join(play_urls),
-            }
-            return {"list": [vod]}
+            if sid.startswith("agg:"):
+                return self._agg_detail_content(sid[4:])
+            return self._official_detail_content(sid)
         except Exception as exc:
             print("红果详情读取失败:", exc)
             return {"list": []}
 
+    def _official_detail_content(self, sid):
+        data = self._router_data(self.host + "/detail?series_id=" + quote(str(sid))) or {}
+        page = self._pick_page(data, "detail_page")
+        detail = page.get("seriesDetail") or {}
+        if not detail:
+            return {"list": []}
+
+        sid = str(detail.get("series_id") or sid)
+        name = detail.get("series_name") or ""
+        pic = detail.get("series_cover") or ""
+        intro = detail.get("series_intro") or ""
+        tags = detail.get("tags") or []
+
+        actors = []
+        for item in detail.get("celebrities") or []:
+            actor = item.get("nickname") or ""
+            role = item.get("sub_title") or ""
+            if actor:
+                actors.append(actor + ((" " + role) if role else ""))
+
+        vids = [str(x) for x in (detail.get("vid_list") or []) if str(x)]
+        total = self._safe_int(detail.get("episode_cnt") or len(vids), len(vids))
+        accessible = self._safe_int(detail.get("accessible_episode_cnt") or 0, 0)
+        if accessible <= 0 or accessible > len(vids):
+            accessible = len(vids)
+
+        # 聚合站补全集：按剧名解析出 vod_id / 播放源 / 集数
+        agg = self._agg_resolve(name)
+        play_urls = []
+        if agg and agg[2]:
+            agg_id, agg_src, agg_count = agg
+            count = agg_count or total or len(vids)
+            for i in range(1, count + 1):
+                vid = vids[i - 1] if i <= len(vids) else ""
+                pid = self._make_pid(sid, vid, agg_id, agg_src, i, name)
+                play_urls.append("第%d集$%s" % (i, pid))
+            remark = "全%d集" % count
+        else:
+            for i in range(1, accessible + 1):
+                pid = self._make_pid(sid, vids[i - 1], "", "", i, name)
+                play_urls.append("第%d集$%s" % (i, pid))
+            remark = ("可播%d集/全%d集" % (accessible, total)) if total else ""
+
+        tag_text = " / ".join([str(x) for x in tags[:4]]) if isinstance(tags, list) else str(tags)
+        vod = {
+            "vod_id": sid,
+            "vod_name": name,
+            "vod_pic": pic,
+            "type_name": tag_text,
+            "vod_year": "",
+            "vod_area": "大陆",
+            "vod_remarks": remark,
+            "vod_actor": " / ".join(actors),
+            "vod_director": "",
+            "vod_content": intro,
+            "vod_play_from": "红果短剧",
+            "vod_play_url": "#".join(play_urls),
+        }
+        return {"list": [vod]}
+
+    def _agg_detail_content(self, agg_id):
+        info = self._agg_detail(agg_id)
+        if not info:
+            return {"list": []}
+        name = info.get("name") or ("红果短剧%s" % agg_id)
+        src = info.get("sid") or "1"
+        count = self._safe_int(info.get("ep_count"), 0)
+        play_urls = []
+        for i in range(1, count + 1):
+            pid = self._make_pid("", "", agg_id, src, i, name)
+            play_urls.append("第%d集$%s" % (i, pid))
+        vod = {
+            "vod_id": "agg:" + str(agg_id),
+            "vod_name": name,
+            "vod_pic": info.get("cover") or "",
+            "type_name": info.get("type_name") or "",
+            "vod_year": "",
+            "vod_area": "大陆",
+            "vod_remarks": ("全%d集" % count) if count else "",
+            "vod_actor": info.get("actor") or "",
+            "vod_director": "",
+            "vod_content": info.get("intro") or "",
+            "vod_play_from": "红果短剧",
+            "vod_play_url": "#".join(play_urls),
+        }
+        return {"list": [vod]}
+
+    # ---------------------------------------------------------------- 搜索
     def searchContent(self, key, quick, pg="1"):
         page_num = self._safe_int(pg, 1)
-        keyword = str(key or "").strip().lower()
+        keyword = str(key or "").strip()
         if not keyword:
-            return {"list": [], "page": page_num}
+            return {"page": page_num, "pagecount": 1, "limit": self.page_size, "total": 0, "list": []}
 
+        # 1) 官方 suggestion
         try:
-            pool = self._get_search_pool()
-            matched = []
-            exists = set()
-            for item in pool:
-                sid = str(item.get("series_id") or "")
-                if not sid or sid in exists:
-                    continue
-                text = " ".join([
-                    str(item.get("series_name") or item.get("series_title") or ""),
-                    str(item.get("series_intro") or ""),
-                    " ".join([str(x) for x in (item.get("tags") or [])]),
-                ]).lower()
-                if keyword in text:
-                    matched.append(item)
-                    exists.add(sid)
-
-            total = len(matched)
-            start = (page_num - 1) * self.page_size
-            end = start + self.page_size
-            return {
-                "page": page_num,
-                "pagecount": max(1, int(math.ceil(total / float(self.page_size)))) if total else 1,
-                "limit": self.page_size,
-                "total": total,
-                "list": self._vod_list(matched[start:end]),
-            }
+            res = self._official_search(keyword, page_num)
+            if res and res.get("list"):
+                return res
         except Exception as exc:
-            print("红果搜索失败:", exc)
-            return {"list": [], "page": page_num}
+            print("红果官方搜索失败，回退聚合:", exc)
+
+        # 2) 聚合站
+        try:
+            res = self._agg_search_items(keyword, page_num)
+            if res and res.get("list"):
+                return res
+        except Exception as exc:
+            print("红果聚合搜索失败，回退本地池:", exc)
+
+        # 3) 本地池
+        return self._local_search(keyword, page_num)
 
     def searchContentPage(self, key, quick, pg):
         return self.searchContent(key, quick, pg)
 
-    def playerContent(self, flag, pid, vipFlags):
-        # 处理 "第X集$series_id|vid" 格式
-        play_id = str(pid or "")
-        if '$' in play_id:
-            play_id = play_id.split('$', 1)[1]
-
-        sid, vid = self._split_play_id(play_id)
-        if not sid:
-            return {"parse": 1, "playUrl": "", "url": str(pid or "")}
-
-        page_url = self.host + "/player/" + quote(sid)
-        if vid:
-            page_url += "/" + quote(vid)
-
+    def _official_search(self, keyword, page_num):
+        url = self.host + "/incent_resource/suggestion?" + urlencode(
+            {"web_id": "", "query": keyword, "count": 20})
+        r = requests.get(url, headers=self.json_headers, timeout=self.timeout, verify=False)
+        if r.status_code != 200:
+            return None
         try:
-            data = self._router_data(page_url) or {}
-            loader = data.get("loaderData") or {}
+            j = r.json()
+        except Exception:
+            return None
+        lst = ((j or {}).get("data") or {}).get("suggest_list") or []
+        items = []
+        seen = set()
+        for it in lst:
+            sid = str(it.get("series_id") or it.get("book_id") or it.get("id") or "")
+            if not sid or sid in seen:
+                continue
+            seen.add(sid)
+            video = it.get("video_data") or {}
+            items.append({
+                "vod_id": sid,
+                "vod_name": it.get("name") or it.get("series_name") or video.get("series_name") or "",
+                "vod_pic": video.get("series_cover") or it.get("cover") or "",
+                "vod_remarks": it.get("sub_title") or "",
+                "vod_content": "",
+            })
+        return {
+            "page": page_num,
+            "pagecount": 1,
+            "limit": self.page_size,
+            "total": len(items),
+            "list": items,
+        }
 
-            # 站点已改为受保护播放（protectedPlayback），但免费集提供公开 MP4：
-            #   https://hongguoduanju.com/video/public/{vid}/360p.mp4
-            # 可用性由播放页 publicVideoSeo 决定（available / seriesId / itemId）。
-            seo = self._first_value_by_key(loader, "publicVideoSeo") or {}
-            if (vid and seo.get("available")
-                    and str(seo.get("seriesId")) == sid
-                    and str(seo.get("itemId")) == vid):
+    def _agg_search_items(self, keyword, page_num):
+        found = self._agg_search(keyword)
+        items = []
+        for raw in found:
+            if isinstance(raw, dict):
+                vod_id = raw.get("vod_id")
+                name = raw.get("vod_name") or ""
+                pic = raw.get("vod_pic") or ""
+            else:
+                vod_id, name = raw[0], raw[1]
+                pic = ""
+            if not vod_id:
+                continue
+            items.append({
+                "vod_id": "agg:%s" % vod_id,
+                "vod_name": name,
+                "vod_pic": pic,
+                "vod_remarks": "",
+                "vod_content": "",
+            })
+        cycle = self.page_size
+        start = (page_num - 1) * cycle
+        return {
+            "page": page_num,
+            "pagecount": 1,
+            "limit": self.page_size,
+            "total": len(items),
+            "list": items[start:start + cycle],
+        }
+
+    def _local_search(self, keyword, page_num):
+        pool = self._get_search_pool()
+        matched = []
+        exists = set()
+        low = keyword.lower()
+        for item in pool:
+            sid = str(item.get("series_id") or "")
+            if not sid or sid in exists:
+                continue
+            text = " ".join([
+                str(item.get("series_name") or item.get("series_title") or ""),
+                str(item.get("series_intro") or ""),
+                " ".join([str(x) for x in (item.get("tags") or [])]),
+            ]).lower()
+            if low in text:
+                matched.append(item)
+                exists.add(sid)
+        total = len(matched)
+        start = (page_num - 1) * self.page_size
+        end = start + self.page_size
+        return {
+            "page": page_num,
+            "pagecount": max(1, int(math.ceil(total / float(self.page_size)))) if total else 1,
+            "limit": self.page_size,
+            "total": total,
+            "list": self._vod_list(matched[start:end]),
+        }
+
+    # ---------------------------------------------------------------- 播放
+    def playerContent(self, flag, pid, vipFlags):
+        raw = str(pid or "")
+        if '$' in raw:
+            raw = raw.split('$', 1)[1]
+
+        parts = raw.split("|", 5)
+        if len(parts) >= 5 and parts[4].isdigit():
+            sid = parts[0].strip()
+            vid = parts[1].strip()
+            agg_id = parts[2].strip()
+            agg_src = parts[3].strip()
+            idx = parts[4].strip()
+            name = parts[5].strip() if len(parts) > 5 else ""
+        else:
+            sid, vid = self._split_play_id(raw)
+            agg_id = ""
+            agg_src = ""
+            idx = "1"
+            name = ""
+            if "|" in raw or "@@@" in raw:
+                # 检测是否为旧的 "第X集$series_id|vid" 形式
+                pass
+
+        # 1) 官方免费集：受保护播放接口返回签名直链
+        if sid and vid:
+            url = self._official_play_url(sid, vid)
+            if url:
                 return {
                     "parse": 0,
                     "playUrl": "",
-                    "url": "https://hongguoduanju.com/video/public/%s/360p.mp4" % quote(vid),
-                    "header": {
-                        "User-Agent": self.headers["User-Agent"],
-                        "Referer": page_url,
-                    },
+                    "url": url,
+                    "header": {"User-Agent": UA, "Referer": self.host + "/"},
                     "jx": 0,
-                    "pic": str(seo.get("posterUrl") or ""),
                 }
-        except Exception as exc:
-            print("红果播放解析失败，回退通用解析:", exc)
 
-        # 非免费集：回退通用解析
+        # 2) 聚合站（详情页已解析出 agg_id）
+        if agg_id:
+            url = self._agg_episode_url(agg_id, agg_src, idx)
+            if url:
+                return self._agg_result(url)
+
+        # 3) 聚合站（按剧名现解析，覆盖官方详情时未命中聚合的情况）
+        if name:
+            agg = self._agg_resolve(name)
+            if agg and agg[2] and self._safe_int(idx, 1) <= agg[2]:
+                url = self._agg_episode_url(agg[0], agg[1], idx)
+                if url:
+                    return self._agg_result(url)
+
+        # 4) 回退通用解析
+        page_url = self.host + "/player/" + quote(sid)
+        if vid:
+            page_url += "/" + quote(vid)
         return {
             "parse": 1,
             "playUrl": "",
             "url": page_url,
-            "header": {
-                "User-Agent": self.headers["User-Agent"],
-                "Referer": self.host + "/",
-            },
+            "header": {"User-Agent": UA, "Referer": self.host + "/"},
         }
 
+    def _agg_result(self, url):
+        return {
+            "parse": 0,
+            "playUrl": "",
+            "url": url,
+            "header": {"User-Agent": UA, "Referer": self.agg_host + "/"},
+            "jx": 0,
+        }
+
+    def _official_play_url(self, sid, vid):
+        try:
+            body = json.dumps({
+                "series_id": str(sid),
+                "item_id": str(vid),
+                "definition": "720p",
+            })
+            url = self.host + "/api/video/protected/play-info?" + urlencode({"aid": 8662})
+            headers = dict(self.json_headers)
+            headers["Content-Type"] = "application/json"
+            r = requests.post(url, data=body, headers=headers, timeout=self.timeout, verify=False)
+            if r.status_code != 200:
+                return ""
+            j = r.json()
+            info = j.get("play_info") or j.get("legacy_play_info") or {}
+            main = info.get("main_url") or ""
+            if isinstance(main, str) and main.startswith("http"):
+                return main
+        except Exception:
+            pass
+        return ""
+
+    def _make_pid(self, sid, vid, agg_id, agg_src, idx, name):
+        safe_name = str(name or "").replace("|", "").replace("\n", "").replace("\t", "").strip()
+        return "|".join([str(sid or ""), str(vid or ""), str(agg_id or ""),
+                         str(agg_src or ""), str(idx), safe_name])
+
+    # ---------------------------------------------------------------- 聚合站
+    def _agg_get(self, path):
+        url = path if path.startswith("http") else self.agg_host + path
+        cached = self._cache.get(url)
+        if cached and time.time() - cached[0] < 300:
+            return cached[1]
+        r = requests.get(url, headers=self.agg_headers, timeout=self.timeout, verify=False)
+        text = r.text if r.status_code == 200 else ""
+        self._cache[url] = (time.time(), text)
+        return text
+
+    def _agg_search(self, name):
+        name = str(name or "").strip()
+        if not name:
+            return []
+        html = self._agg_get(AGG_SEARCH % quote(name))
+        if not html:
+            return []
+        found = []
+        seen = set()
+        for m in re.finditer(r'href="/voddetail/(\d+)\.html"[^>]*title="([^"]*)"', html):
+            vod_id, title = m.group(1), m.group(2).strip()
+            if vod_id not in seen:
+                seen.add(vod_id)
+                found.append({"vod_id": vod_id, "vod_name": title, "vod_pic": ""})
+        if not found:
+            for m in re.finditer(r'href="/voddetail/(\d+)\.html"[^>]*>([^<]+)</a>', html):
+                vod_id, title = m.group(1), m.group(2).strip()
+                if vod_id not in seen:
+                    seen.add(vod_id)
+                    found.append({"vod_id": vod_id, "vod_name": title, "vod_pic": ""})
+        return found
+
+    def _agg_best(self, name, found):
+        if not found:
+            return None
+        target = self._norm_name(name)
+        for item in found:
+            if self._norm_name(item["vod_name"]) == target:
+                return item
+        for item in found:
+            vn = self._norm_name(item["vod_name"])
+            if target and (target in vn or vn in target):
+                return item
+        return found[0]
+
+    def _agg_detail(self, agg_id):
+        html = self._agg_get("/voddetail/%s.html" % agg_id)
+        if not html:
+            return None
+        srcs = re.findall(r'/vodplay/%s-(\d+)-(\d+)\.html' % re.escape(str(agg_id)), html)
+        if not srcs:
+            return None
+        sid = srcs[0][0]
+        max_ep = 0
+        for row in srcs:
+            if row[0] == sid:
+                max_ep = max(max_ep, self._safe_int(row[1], 0))
+
+        name = ""
+        m = re.search(r'<h1[^>]*>(.*?)</h1>', html, re.S)
+        if m:
+            name = re.sub(r'<[^>]+>', '', m.group(1)).strip()
+        if not name:
+            m = re.search(r'<title>(.*?)</title>', html, re.S)
+            if m:
+                name = re.split(r'[－\-_|]', m.group(1).strip())[0].strip()
+        name = self._clean_agg_name(name)
+
+        cover = ""
+        m = re.search(r'(?:data-original|data-src|src)="([^"]+\.(?:jpg|jpeg|png|webp))"', html)
+        if m:
+            cover = m.group(1)
+            if cover.startswith("/"):
+                cover = self.agg_host + cover
+
+        intro = ""
+        m = re.search(r'<meta[^>]+name="description"[^>]+content="([^"]*)"', html)
+        if m:
+            intro = m.group(1).strip()
+
+        return {
+            "name": name,
+            "cover": cover,
+            "intro": intro,
+            "sid": sid,
+            "ep_count": max_ep,
+        }
+
+    def _agg_resolve(self, name):
+        name = str(name or "").strip()
+        if not name:
+            return None
+        if name in self._agg_cache:
+            return self._agg_cache[name]
+        res = None
+        try:
+            found = self._agg_search(name)
+            best = self._agg_best(name, found)
+            if best:
+                info = self._agg_detail(best["vod_id"])
+                if info and info.get("ep_count"):
+                    res = (best["vod_id"], info.get("sid") or "1", info.get("ep_count"))
+        except Exception as exc:
+            print("红果聚合解析失败:", exc)
+        self._agg_cache[name] = res
+        return res
+
+    def _agg_episode_url(self, agg_id, sid, idx):
+        sid = str(sid or "1")
+        idx = str(self._safe_int(idx, 1))
+        html = self._agg_get("/vodplay/%s-%s-%s.html" % (agg_id, sid, idx))
+        return self._extract_m3u8(html)
+
+    def _extract_m3u8(self, html):
+        if not html:
+            return ""
+        for m in re.finditer(r'player_[0-9a-z]+\s*=\s*(\{.*?\})\s*(?:;|</script>)', html, re.S):
+            try:
+                obj = json.loads(m.group(1))
+            except Exception:
+                continue
+            url = obj.get("url") or ""
+            if ";" in url:
+                url = url.split(";")[0]
+            if isinstance(url, str) and re.search(r'https?://\S+\.m3u8', url):
+                return url
+        return ""
+
+    def _clean_agg_name(self, name):
+        name = str(name or "").strip()
+        name = re.sub(r'(短剧)?高清完整版(在线观看|免费观看|下载)?$', '', name).strip()
+        name = re.sub(r'(在线观看|免费观看|全集)$', '', name).strip()
+        name = name.strip("《》").strip()
+        return name
+
+    def _norm_name(self, name):
+        return re.sub(r'[\s，,。.、！!？?：:·\-—_/\\()（）\[\]【】"\'’“”]+', '', str(name or ""))
+
+    # ---------------------------------------------------------------- 通用
     def localProxy(self, params):
         return [404, "text/plain", "not found"]
 
@@ -333,7 +658,6 @@ class Spider(Spider):
         response.raise_for_status()
         response.encoding = "utf-8"
 
-        # 站点用 _ROUTER_DATA = {...}; 需匹配平衡的大括号，避免贪婪/非贪婪截断
         text = response.text
         m = re.search(r"_ROUTER_DATA\s*=\s*", text)
         if not m:
@@ -374,7 +698,6 @@ class Spider(Spider):
         if isinstance(loader.get(preferred), dict):
             return loader.get(preferred) or {}
 
-        # 优先选真正承载数据的容器（含已知列表字段），避免误选 layout 等空壳
         content_keys = ("recommendList", "selectorList", "videoList", "seriesDetail", "homeSections")
         for value in loader.values():
             if isinstance(value, dict) and any(k in value for k in content_keys):
@@ -389,7 +712,7 @@ class Spider(Spider):
         return {}
 
     def _build_filters(self):
-        filters = {"home": []}
+        filters = {}
         for tid, _name, _path in CATEGORIES:
             topics = self._type_topics(tid)
             if topics:
@@ -404,7 +727,7 @@ class Spider(Spider):
 
     def _type_topics(self, tid):
         try:
-            data = self._router_data(self.host + "/category/" + tid) or {}
+            data = self._router_data(self.host + "/category/" + str(tid)) or {}
             page = self._pick_page(data, "category_page")
             topics = []
             for row in page.get("selectorList") or []:
@@ -417,7 +740,7 @@ class Spider(Spider):
                 return topics
         except Exception:
             pass
-        return STATIC_TOPICS.get(tid, [])
+        return STATIC_TOPICS.get(str(tid), [])
 
     def _slug_of(self, tid, extend):
         tid = str(tid or "")
@@ -429,7 +752,7 @@ class Spider(Spider):
                 slug = str(value).strip()
                 break
 
-        if not slug and tid not in CATEGORY_MAP and tid not in ("", "home", "all"):
+        if not slug and tid not in CATEGORY_MAP and tid not in ("", "all"):
             slug = tid
 
         if slug.startswith("cate_"):
@@ -440,11 +763,7 @@ class Spider(Spider):
 
     def _category_path(self, tid, extend):
         tid = str(tid or "")
-        if tid in CATEGORY_MAP:
-            base = CATEGORY_MAP[tid]
-        else:
-            base = CATEGORY_MAP["real-drama"]
-
+        base = CATEGORY_MAP.get(tid, CATEGORY_MAP["real-drama"])
         slug = self._slug_of(tid, extend)
         return base + (("/" + slug) if slug else "")
 
@@ -542,9 +861,6 @@ class Spider(Spider):
 
     def _split_play_id(self, play_id):
         raw = str(play_id or "")
-        if "|" in raw:
-            sid, vid = raw.split("|", 1)
-            return sid.strip(), vid.strip()
         if "@@@" in raw:
             sid, vid = raw.split("@@@", 1)
             return sid.strip(), vid.strip()
@@ -560,18 +876,3 @@ class Spider(Spider):
             return int(value)
         except Exception:
             return default
-
-    def _first_value_by_key(self, obj, target_key):
-        if isinstance(obj, dict):
-            if target_key in obj:
-                return obj.get(target_key)
-            for value in obj.values():
-                found = self._first_value_by_key(value, target_key)
-                if found is not None:
-                    return found
-        elif isinstance(obj, list):
-            for value in obj:
-                found = self._first_value_by_key(value, target_key)
-                if found is not None:
-                    return found
-        return None
