@@ -84,7 +84,8 @@ UA = ("Mozilla/5.0 (Linux; Android 12; TV) AppleWebKit/537.36 "
 
 # 聚合站（苹果CMS / conch 模板），按剧名解析全集 m3u8
 AGG_HOST = "https://www.hongguoapp.cn"
-AGG_SEARCH = "/vodsearch/-------------.html?wd=%s"
+# /vodsearch 页被 Cloudflare 拦（403）；改用苹果CMS 的 ajax 联想接口（可达）
+AGG_SUGGEST = "/index.php/ajax/suggest?mid=1&wd=%s"
 
 
 class Spider(Spider):
@@ -228,18 +229,19 @@ class Spider(Spider):
             accessible = len(vids)
 
         # 聚合站补全集：按剧名解析出 vod_id / 播放源 / 集数
-        agg = self._agg_resolve(name)
+        agg = self._agg_resolve(name, total)
         play_urls = []
         if agg and agg[2]:
             agg_id, agg_src, agg_count = agg
-            count = agg_count or total or len(vids)
+            count = max(agg_count, total or 0)
             for i in range(1, count + 1):
                 vid = vids[i - 1] if i <= len(vids) else ""
                 pid = self._make_pid(sid, vid, agg_id, agg_src, i, name)
                 play_urls.append("第%d集$%s" % (i, pid))
             remark = "全%d集" % count
         else:
-            for i in range(1, accessible + 1):
+            # 聚合不可达时：与官网一致，列出全部集数（免费集可播，其余靠播放时再解析聚合）
+            for i in range(1, len(vids) + 1):
                 pid = self._make_pid(sid, vids[i - 1], "", "", i, name)
                 play_urls.append("第%d集$%s" % (i, pid))
             remark = ("可播%d集/全%d集" % (accessible, total)) if total else ""
@@ -429,11 +431,14 @@ class Spider(Spider):
             agg_src = ""
             idx = "1"
             name = ""
-            if "|" in raw or "@@@" in raw:
-                # 检测是否为旧的 "第X集$series_id|vid" 形式
-                pass
 
-        # 1) 官方免费集：受保护播放接口返回签名直链
+        # 1) 聚合站优先（标准 HLS，统一补全全集，播放器兼容性最好）
+        if agg_id:
+            url = self._agg_episode_url(agg_id, agg_src, idx)
+            if url:
+                return self._agg_result(url)
+
+        # 2) 官方免费集：受保护播放接口返回签名直链
         if sid and vid:
             url = self._official_play_url(sid, vid)
             if url:
@@ -444,12 +449,6 @@ class Spider(Spider):
                     "header": {"User-Agent": UA, "Referer": self.host + "/"},
                     "jx": 0,
                 }
-
-        # 2) 聚合站（详情页已解析出 agg_id）
-        if agg_id:
-            url = self._agg_episode_url(agg_id, agg_src, idx)
-            if url:
-                return self._agg_result(url)
 
         # 3) 聚合站（按剧名现解析，覆盖官方详情时未命中聚合的情况）
         if name:
@@ -471,10 +470,16 @@ class Spider(Spider):
         }
 
     def _agg_result(self, url):
+        # m3u8 路径含中文（第N集），percent-encode 以防播放器不转义
+        safe_url = url
+        try:
+            safe_url = quote(url, safe=":/?&=%#")
+        except Exception:
+            pass
         return {
             "parse": 0,
             "playUrl": "",
-            "url": url,
+            "url": safe_url,
             "header": {"User-Agent": UA, "Referer": self.agg_host + "/"},
             "jx": 0,
         }
@@ -507,12 +512,15 @@ class Spider(Spider):
                          str(agg_src or ""), str(idx), safe_name])
 
     # ---------------------------------------------------------------- 聚合站
-    def _agg_get(self, path):
+    def _agg_get(self, path, ajax=False):
         url = path if path.startswith("http") else self.agg_host + path
         cached = self._cache.get(url)
         if cached and time.time() - cached[0] < 300:
             return cached[1]
-        r = requests.get(url, headers=self.agg_headers, timeout=self.timeout, verify=False)
+        headers = dict(self.agg_headers)
+        if ajax:
+            headers["X-Requested-With"] = "XMLHttpRequest"
+        r = requests.get(url, headers=headers, timeout=self.timeout, verify=False)
         text = r.text if r.status_code == 200 else ""
         self._cache[url] = (time.time(), text)
         return text
@@ -521,38 +529,51 @@ class Spider(Spider):
         name = str(name or "").strip()
         if not name:
             return []
-        html = self._agg_get(AGG_SEARCH % quote(name))
-        if not html:
+        text = self._agg_get(AGG_SUGGEST % quote(name), ajax=True)
+        if not text:
+            return []
+        try:
+            data = json.loads(text)
+        except Exception:
             return []
         found = []
         seen = set()
-        for m in re.finditer(r'href="/voddetail/(\d+)\.html"[^>]*title="([^"]*)"', html):
-            vod_id, title = m.group(1), m.group(2).strip()
-            if vod_id not in seen:
-                seen.add(vod_id)
-                found.append({"vod_id": vod_id, "vod_name": title, "vod_pic": ""})
-        if not found:
-            for m in re.finditer(r'href="/voddetail/(\d+)\.html"[^>]*>([^<]+)</a>', html):
-                vod_id, title = m.group(1), m.group(2).strip()
-                if vod_id not in seen:
-                    seen.add(vod_id)
-                    found.append({"vod_id": vod_id, "vod_name": title, "vod_pic": ""})
+        for it in (data or {}).get("list") or []:
+            vod_id = str(it.get("id") or "").strip()
+            if not vod_id or vod_id in seen:
+                continue
+            seen.add(vod_id)
+            pic = it.get("pic") or ""
+            if isinstance(pic, str) and pic.startswith("/"):
+                pic = self.agg_host + pic
+            found.append({
+                "vod_id": vod_id,
+                "vod_name": it.get("name") or "",
+                "vod_pic": pic,
+                "vod_en": it.get("en") or "",
+            })
         return found
 
-    def _agg_best(self, name, found):
+    def _agg_candidates(self, name, found):
         if not found:
-            return None
+            return []
         target = self._norm_name(name)
+        exact, prefix, contain, other = [], [], [], []
         for item in found:
-            if self._norm_name(item["vod_name"]) == target:
-                return item
-        for item in found:
-            vn = self._norm_name(item["vod_name"])
-            if target and (target in vn or vn in target):
-                return item
-        return found[0]
+            vn = self._norm_name(item.get("vod_name") or "")
+            if not target:
+                other.append(item)
+            elif vn == target:
+                exact.append(item)
+            elif vn.startswith(target):
+                prefix.append(item)
+            elif target in vn or vn in target:
+                contain.append(item)
+            else:
+                other.append(item)
+        return exact + prefix + contain + other
 
-    def _agg_detail(self, agg_id):
+    def _agg_detail(self, agg_id, hint_name=""):
         html = self._agg_get("/voddetail/%s.html" % agg_id)
         if not html:
             return None
@@ -565,10 +586,11 @@ class Spider(Spider):
             if row[0] == sid:
                 max_ep = max(max_ep, self._safe_int(row[1], 0))
 
-        name = ""
-        m = re.search(r'<h1[^>]*>(.*?)</h1>', html, re.S)
-        if m:
-            name = re.sub(r'<[^>]+>', '', m.group(1)).strip()
+        name = self._clean_agg_name(hint_name)
+        if not name:
+            m = re.search(r'<h1[^>]*>(.*?)</h1>', html, re.S)
+            if m:
+                name = re.sub(r'<[^>]+>', '', m.group(1)).strip()
         if not name:
             m = re.search(r'<title>(.*?)</title>', html, re.S)
             if m:
@@ -595,7 +617,7 @@ class Spider(Spider):
             "ep_count": max_ep,
         }
 
-    def _agg_resolve(self, name):
+    def _agg_resolve(self, name, expect=0):
         name = str(name or "").strip()
         if not name:
             return None
@@ -604,11 +626,22 @@ class Spider(Spider):
         res = None
         try:
             found = self._agg_search(name)
-            best = self._agg_best(name, found)
-            if best:
-                info = self._agg_detail(best["vod_id"])
-                if info and info.get("ep_count"):
-                    res = (best["vod_id"], info.get("sid") or "1", info.get("ep_count"))
+            expect = self._safe_int(expect, 0)
+            min_ep = max(1, int(expect * 0.5)) if expect else 1
+            best = None
+            best_eps = 0
+            for cand in self._agg_candidates(name, found)[:4]:
+                info = self._agg_detail(cand["vod_id"], cand.get("vod_name") or "")
+                if not info:
+                    continue
+                eps = self._safe_int(info.get("ep_count"), 0)
+                # 过滤 1 集的同名占位/错误条目（官网有明确总集数时不接受过少集数）
+                if expect and eps < min_ep:
+                    continue
+                if eps > best_eps:
+                    best_eps = eps
+                    best = (cand["vod_id"], info.get("sid") or "1", eps)
+            res = best
         except Exception as exc:
             print("红果聚合解析失败:", exc)
         self._agg_cache[name] = res
