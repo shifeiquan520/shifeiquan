@@ -110,7 +110,8 @@ class Spider(Spider):
         return
 
     def homeContent(self, filter):
-        classes = [
+        classes = [{"type_id": "home", "type_name": "推荐"}]
+        classes += [
             {"type_id": tid, "type_name": name}
             for tid, name, _path in CATEGORIES
         ]
@@ -140,8 +141,28 @@ class Spider(Spider):
     def categoryContent(self, tid, pg, filter, extend):
         page_num = self._safe_int(pg, 1)
         try:
+            if str(tid) == "home":
+                videos = self.homeVideoContent().get("list", [])
+                return {
+                    "page": page_num,
+                    "pagecount": 1,
+                    "limit": self.page_size,
+                    "total": len(videos),
+                    "list": videos,
+                }
+
             path = self._category_path(tid, extend or {})
             videos, total_pages, page_size = self._category_items(path, page_num)
+
+            # 落地页（无题材筛选）为空时兜底：先试 ?page=1，再退到该类型首个题材
+            if not videos and page_num == 1 and not self._slug_of(tid, extend or {}):
+                videos, total_pages, page_size = self._category_items(path, 1, force_page=True)
+            if not videos and not self._slug_of(tid, extend or {}):
+                topics = self._type_topics(str(tid))
+                if topics and topics[0].get("v"):
+                    videos, total_pages, page_size = self._category_items(
+                        path + "/" + str(topics[0]["v"]), page_num)
+
             pagecount = total_pages if total_pages > 0 else 1
             return {
                 "page": page_num,
@@ -266,27 +287,30 @@ class Spider(Spider):
 
         try:
             data = self._router_data(page_url) or {}
-            info = self._first_value_by_key(data.get("loaderData") or {}, "video_player_info") or {}
-            play_url = str(info.get("main_url") or info.get("backup_url") or "")
-            poster = str(info.get("poster_url") or "")
+            loader = data.get("loaderData") or {}
 
-            if play_url:
+            # 站点已改为受保护播放（protectedPlayback），但免费集提供公开 MP4：
+            #   https://hongguoduanju.com/video/public/{vid}/360p.mp4
+            # 可用性由播放页 publicVideoSeo 决定（available / seriesId / itemId）。
+            seo = self._first_value_by_key(loader, "publicVideoSeo") or {}
+            if (vid and seo.get("available")
+                    and str(seo.get("seriesId")) == sid
+                    and str(seo.get("itemId")) == vid):
                 return {
                     "parse": 0,
                     "playUrl": "",
-                    "url": play_url,
+                    "url": "https://hongguoduanju.com/video/public/%s/360p.mp4" % quote(vid),
                     "header": {
                         "User-Agent": self.headers["User-Agent"],
                         "Referer": page_url,
-                        "Origin": self.host,
                     },
                     "jx": 0,
-                    "pic": poster,
+                    "pic": str(seo.get("posterUrl") or ""),
                 }
         except Exception as exc:
-            print("红果直链解析失败，尝试通用解析:", exc)
+            print("红果播放解析失败，回退通用解析:", exc)
 
-        # 站点已改为受保护播放（protectedPlayback），SSR 不再提供直链，回退通用解析
+        # 非免费集：回退通用解析
         return {
             "parse": 1,
             "playUrl": "",
@@ -349,6 +373,13 @@ class Spider(Spider):
         loader = (router_data or {}).get("loaderData") or {}
         if isinstance(loader.get(preferred), dict):
             return loader.get(preferred) or {}
+
+        # 优先选真正承载数据的容器（含已知列表字段），避免误选 layout 等空壳
+        content_keys = ("recommendList", "selectorList", "videoList", "seriesDetail", "homeSections")
+        for value in loader.values():
+            if isinstance(value, dict) and any(k in value for k in content_keys):
+                return value
+
         for key, value in loader.items():
             if isinstance(value, dict) and key.endswith("/page"):
                 return value
@@ -358,7 +389,7 @@ class Spider(Spider):
         return {}
 
     def _build_filters(self):
-        filters = {}
+        filters = {"home": []}
         for tid, _name, _path in CATEGORIES:
             topics = self._type_topics(tid)
             if topics:
@@ -388,15 +419,8 @@ class Spider(Spider):
             pass
         return STATIC_TOPICS.get(tid, [])
 
-    def _category_path(self, tid, extend):
+    def _slug_of(self, tid, extend):
         tid = str(tid or "")
-        if tid in CATEGORY_MAP:
-            base = CATEGORY_MAP[tid]
-        elif re.match(r"^[A-Za-z0-9_-]+$", tid) and tid not in ("", "home", "all"):
-            base = CATEGORY_MAP["real-drama"]
-        else:
-            base = CATEGORY_MAP["real-drama"]
-
         data = extend if isinstance(extend, dict) else {}
         slug = ""
         for key in ("topic", "background", "category"):
@@ -405,20 +429,29 @@ class Spider(Spider):
                 slug = str(value).strip()
                 break
 
-        if not slug and tid not in CATEGORY_MAP and re.match(r"^[A-Za-z0-9_-]+$", tid):
+        if not slug and tid not in CATEGORY_MAP and tid not in ("", "home", "all"):
             slug = tid
 
         if slug.startswith("cate_"):
             slug = slug[len("cate_"):]
         if slug and not re.match(r"^[A-Za-z0-9_-]+$", slug):
             slug = ""
+        return slug
 
+    def _category_path(self, tid, extend):
+        tid = str(tid or "")
+        if tid in CATEGORY_MAP:
+            base = CATEGORY_MAP[tid]
+        else:
+            base = CATEGORY_MAP["real-drama"]
+
+        slug = self._slug_of(tid, extend)
         return base + (("/" + slug) if slug else "")
 
-    def _category_items(self, path, page=1):
+    def _category_items(self, path, page=1, force_page=False):
         url = self.host + (path or "/category/real-drama")
         page = self._safe_int(page, 1)
-        if page > 1:
+        if page > 1 or force_page:
             url += "?" + urlencode({"page": page})
 
         data = self._router_data(url) or {}
