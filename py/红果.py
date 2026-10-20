@@ -32,7 +32,8 @@ except ImportError:
         pass
 
 
-AGG = "https://www.hongguoapp.cn"
+HOSTS = ["https://www.hongguostudio.com", "https://www.hongguoapp.cn"]
+AGG = HOSTS[0]
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 
@@ -54,18 +55,8 @@ TID = "51"
 class Spider(Spider):
     def __init__(self):
         self.host = AGG
-        self.headers = {
-            "User-Agent": UA,
-            "Referer": AGG + "/",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9",
-        }
-        self.ajax_headers = {
-            "User-Agent": UA,
-            "Referer": AGG + "/",
-            "X-Requested-With": "XMLHttpRequest",
-        }
-        self.timeout = 20
+        self.timeout = 12
+        self._host = HOSTS[0]
         self._cache = {}
         self._ai_cache = None
 
@@ -178,7 +169,7 @@ class Spider(Spider):
             if pic.startswith("//"):
                 pic = "https:" + pic
             elif pic.startswith("/"):
-                pic = AGG + pic
+                pic = self._base() + pic
 
         intro = ""
         m = re.search(r'<meta\s+name="description"\s+content="([^"]*)"', html)
@@ -248,14 +239,14 @@ class Spider(Spider):
                 "parse": 0,
                 "playUrl": "",
                 "url": quote(url, safe=":/?&=%#"),
-                "header": {"User-Agent": UA, "Referer": AGG + "/"},
+                "header": {"User-Agent": UA, "Referer": self._base() + "/"},
                 "jx": 0,
             }
         return {
             "parse": 1,
             "playUrl": "",
-            "url": "%s/vodplay/%s-%s-%s.html" % (AGG, vid, sid, n),
-            "header": {"User-Agent": UA, "Referer": AGG + "/"},
+            "url": "%s/vodplay/%s-%s-%s.html" % (self._base(), vid, sid, n),
+            "header": {"User-Agent": UA, "Referer": self._base() + "/"},
         }
 
     # ---------------------------------------------------------------- AI 列表
@@ -286,21 +277,61 @@ class Spider(Spider):
         return items
 
     # ---------------------------------------------------------------- 聚合站
+    def _base(self):
+        return getattr(self, "_host", HOSTS[0]) or HOSTS[0]
+
+    def _host_order(self):
+        cur = self._base()
+        return [cur] + [h for h in HOSTS if h != cur]
+
     def _get(self, path, ajax=False):
-        url = path if path.startswith("http") else AGG + path
-        cached = self._cache.get(url)
+        path = str(path or "")
+        if path.startswith("http"):
+            return self._fetch(path, ajax)[1]
+        cached = self._cache.get(path)
         if cached and time.time() - cached[0] < 300:
             return cached[1]
-        headers = dict(self.ajax_headers if ajax else self.headers)
         text = ""
+        for _round in range(2):
+            for base in self._host_order():
+                status, body = self._fetch(base + path, ajax)
+                if status == 200 and body and not self._is_blocked(status, body):
+                    self._host = base
+                    text = body
+                    break
+            if text:
+                break
+            time.sleep(0.25)
+        self._cache[path] = (time.time(), text)
+        return text
+
+    def _fetch(self, url, ajax=False):
+        base = "/".join(url.split("/", 3)[:3]) or self._base()
+        headers = {
+            "User-Agent": UA,
+            "Referer": base + "/",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9",
+        }
+        if ajax:
+            headers["X-Requested-With"] = "XMLHttpRequest"
         try:
             r = requests.get(url, headers=headers, timeout=self.timeout, verify=False)
             r.encoding = "utf-8"
-            text = r.text if r.status_code == 200 else ""
+            return r.status_code, (r.text if r.status_code == 200 else "")
         except Exception as exc:
-            print("聚合站请求失败:", exc)
-        self._cache[url] = (time.time(), text)
-        return text
+            print("红果请求失败:", url, exc)
+            return 0, ""
+
+    def _is_blocked(self, status, text):
+        if status in (403, 429, 503):
+            return True
+        low = (text or "")[:2000].lower()
+        for marker in ("just a moment", "cf-browser-verification", "challenge-platform",
+                       "attention required", "cf_chl_opt", "cf-chl"):
+            if marker in low:
+                return True
+        return False
 
     def _suggest_list(self, wd):
         wd = str(wd or "").strip()
@@ -323,7 +354,7 @@ class Spider(Spider):
                 if pic.startswith("//"):
                     pic = "https:" + pic
                 elif pic.startswith("/"):
-                    pic = AGG + pic
+                    pic = self._base() + pic
             out.append({
                 "vod_id": vid,
                 "vod_name": (it.get("name") or "").strip(),
@@ -362,7 +393,7 @@ class Spider(Spider):
                 if pic.startswith("//"):
                     pic = "https:" + pic
                 elif pic.startswith("/"):
-                    pic = AGG + pic
+                    pic = self._base() + pic
 
             rem = ""
             rm = re.search(r'remarks[^>]*>([^<]*)<', inner)
@@ -418,7 +449,7 @@ class Spider(Spider):
         fields[9] = res
         fields[11] = year
         enc = [quote(v, safe="") if v else "" for v in fields]
-        return AGG + "/vodshow/" + "-".join(enc) + ".html"
+        return "/vodshow/" + "-".join(enc) + ".html"
 
     def _page_count(self, html, cur):
         if html:
