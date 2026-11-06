@@ -49,14 +49,32 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 
 CLASSES = [("real", "真人短剧"), ("ai", "AI短剧")]
 
-# 官方题材（来自 ORZ type 标签首段）——本地兜底，不依赖实时接口
-REAL_GENRES = ["爱情", "都市", "家庭", "成长", "逆袭", "剧情", "悬疑",
-               "古装", "年代", "奇幻", "青春", "玄幻", "喜剧", "家族"]
+# 官方题材（来自 ORZ type 标签首段）——本地兜底
+REAL_GENRES = ["古装", "战争", "青春偶像", "喜剧", "家庭", "犯罪", "动作", "奇幻", "剧情",
+               "历史", "经典", "乡村", "情景", "商战", "网剧"]
 AI_GENRES = ["剧情", "恋爱", "脑洞", "宫廷", "种田", "末世", "总裁",
              "武侠", "玄幻", "悬疑", "萌宝", "科幻", "家族", "日常"]
 
 AI_KEYWORDS = ["真人AI", "AI版", "AI真人"]
 SEED_AI = ["风水天师", "万妖图录传", "斩仙台下震惊诸神", "我家井里有条龙"]
+
+# AI 题材 -> 聚合站搜索关键词映射（ORZ 挂了时兜底用）
+AI_GENRE_KEYWORDS = {
+    "剧情": ["剧情AI", "剧情真人AI", "AI剧情"],
+    "恋爱": ["恋爱AI", "甜宠AI", "言情AI"],
+    "脑洞": ["脑洞AI", "悬疑AI", "反转AI"],
+    "宫廷": ["宫廷AI", "古装AI", "宫斗AI"],
+    "种田": ["种田AI", "经营AI", "发家致富AI"],
+    "末世": ["末世AI", "废土AI", "生存AI"],
+    "总裁": ["总裁AI", "霸总AI", "豪门AI"],
+    "武侠": ["武侠AI", "仙侠AI", "江湖AI"],
+    "玄幻": ["玄幻AI", "奇幻AI", "魔幻AI"],
+    "悬疑": ["悬疑AI", "推理AI", "破案AI"],
+    "萌宝": ["萌宝AI", "带球跑AI", "宝宝AI"],
+    "科幻": ["科幻AI", "未来AI", "机甲AI"],
+    "家族": ["家族AI", "豪门恩怨AI", "传承AI"],
+    "日常": ["日常AI", "生活AI", "治愈AI"],
+}
 
 PAGE_SIZE = 20
 ORZ_PAGE_SIZE = 18
@@ -128,10 +146,21 @@ class Spider(Spider):
         # 真人短剧：优先 ORZ，失败回退聚合站 /vodshow
         if tid == "real":
             return self._real_category(page, genre)
-        # AI短剧：关键词搜索聚合站（无官方分类）
-        return self._ai_category(page)
+        # AI短剧：支持题材筛选（ORZ 恢复后走官方，挂了走关键词映射）
+        return self._ai_category(page, genre)
 
     def _real_category(self, page, genre):
+        # 先尝试 ORZ 官方分类（含题材筛选）
+        try:
+            res = self._real_category_orz(page, genre)
+            if res["list"]:
+                return res
+        except Exception:
+            pass
+        # ORZ 挂了/无数据 -> 直接走聚合站分页（不缓存，透传分页）
+        return self._real_category_agg(page, genre)
+
+    def _real_category_orz(self, page, genre):
         key = "real|%s" % genre
         if page <= 1 or key not in self._scan_state:
             self._scan_state[key] = {"items": [], "next_page": 1, "done": False}
@@ -141,13 +170,11 @@ class Spider(Spider):
         guard = 0
         while len(state["items"]) < target and not state["done"] and guard < SCAN_GUARD:
             guard += 1
-            # 优先 ORZ
             data = self._orz_get(type="days_7_to_date", action="today_new",
                                  all_time="true", page=str(state["next_page"]))
             rows = data.get("data") or []
             if not rows:
-                # ORZ 无数据/挂了 -> 回退聚合站 /vodshow
-                return self._real_category_agg(page, genre)
+                raise ValueError("ORZ no data")
             state["next_page"] += 1
             for it in rows:
                 if genre and self._main_tag(it.get("type")) != genre:
@@ -184,8 +211,11 @@ class Spider(Spider):
             "list": vods[:PAGE_SIZE] if len(vods) > PAGE_SIZE else vods,
         }
 
-    def _ai_category(self, page):
+    def _ai_category(self, page, genre=""):
         items = self._ai_list()
+        # ORZ 挂了时聚合站无 AI 题材元数据，忽略 genre，返回全部 AI 剧
+        if genre:
+            print("AI题材筛选需要 ORZ 官方接口，当前已降级，显示全部 AI 剧")
         start = (page - 1) * PAGE_SIZE
         chunk = items[start:start + PAGE_SIZE]
         pagecount = max(1, (len(items) + PAGE_SIZE - 1) // PAGE_SIZE)
