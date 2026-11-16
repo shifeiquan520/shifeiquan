@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-斗鱼直播 - 影视仓插件（修正 API）
+斗鱼直播 - 影视仓插件（完善播放地址获取，多接口兜底）
 支持：分类浏览、直播间列表、播放地址获取
 """
 
@@ -42,8 +42,6 @@ HEADERS = {
     "Origin": "https://m.douyu.com"
 }
 
-# 斗鱼分类：显示名称 -> (cateId, childId)
-# 参考斗鱼移动端 API: https://www.douyu.com/gapi/rkc/directory/mixList/{cateId}_{childId}/{page}
 CATEGORIES = {
     "热门推荐": ("0", "0"),
     "英雄联盟": ("1", "1"),
@@ -126,8 +124,9 @@ class Spider(Spider):
         return None
 
     def _get_play_url(self, room_id):
-        """获取斗鱼真实播放地址"""
-        # 1. 尝试 H5 接口
+        """获取斗鱼真实播放地址 - 多接口兜底"""
+        
+        # 1. H5 接口 (最常用)
         url = f"https://www.douyu.com/lapi/live/getH5Play/{room_id}"
         data = self._fetch_json(url)
         if data and data.get("code") == 0:
@@ -137,18 +136,38 @@ class Spider(Spider):
             if play_url:
                 return play_url
 
-        # 2. 备用 betard 接口
+        # 2. betard 接口
         url2 = f"https://www.douyu.com/betard/{room_id}"
         data2 = self._fetch_json(url2)
         if data2 and data2.get("code") == 0:
-            return data2.get("data", {}).get("room", {}).get("hls_url", "")
+            play_url = data2.get("data", {}).get("room", {}).get("hls_url", "")
+            if play_url:
+                return play_url
 
-        # 3. 移动端接口
+        # 3. 移动端 room/list 接口
         url3 = f"https://m.douyu.com/api/room/list?roomIds={room_id}"
         data3 = self._fetch_json(url3)
         if data3 and data3.get("error") == 0:
             room = data3.get("data", {}).get("list", [{}])[0]
-            return room.get("hlsUrl", "") or room.get("rtmpUrl", "")
+            play_url = room.get("hlsUrl", "") or room.get("rtmpUrl", "") or room.get("hls_url", "") or room.get("rtmp_url", "")
+            if play_url:
+                return play_url
+
+        # 4. 第三方获取播放地址接口
+        url4 = f"https://www.douyu.com/lapi/live/thirdPart/getPlay/{room_id}"
+        data4 = self._fetch_json(url4)
+        if data4 and data4.get("code") == 0:
+            play_url = data4.get("data", {}).get("play_url", "")
+            if play_url:
+                return play_url
+
+        # 5. 直接获取 RTMP (部分直播间)
+        url5 = f"https://www.douyu.com/swf_api/homeH5Enc?roomId={room_id}"
+        data5 = self._fetch_json(url5)
+        if data5 and data5.get("error") == 0:
+            play_url = data5.get("data", {}).get("rtmp_live", "") or data5.get("data", {}).get("hls_url", "")
+            if play_url:
+                return play_url
 
         return ""
 
@@ -187,7 +206,6 @@ class Spider(Spider):
         if cached:
             return cached
 
-        # 使用移动端 API，更稳定
         url = f"https://www.douyu.com/gapi/rkc/directory/mixList/{cate_id}_{child_id}/{page}"
         data = self._fetch_json(url)
         items = []
