@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-虎牙直播 - 影视仓插件（修复版，对齐采集之王架构）
+虎牙直播 - 影视仓插件（参考 JS 版修正 API）
 支持：分类浏览、直播间列表、播放地址获取
 """
 
@@ -9,8 +9,8 @@ import re
 import time
 import warnings
 import hashlib
-import random
-from urllib.parse import unquote
+import base64
+from urllib.parse import unquote, urlparse, parse_qs
 
 import requests
 
@@ -38,31 +38,38 @@ except ImportError:
         def localProxy(self, param): return None
 
 
+# 移动端 UA
+MOBILE_UA = "Mozilla/5.0 (Linux; Android 11; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Referer": "https://www.huya.com/",
-    "Origin": "https://www.huya.com"
+    "User-Agent": MOBILE_UA,
+    "Referer": "https://m.huya.com/",
+    "Origin": "https://m.huya.com"
 }
 
+# 分类映射：显示名称 -> cateId (参考 JS 版 class_url 和 filter_def)
 CATEGORIES = {
-    "热门推荐": "0",
+    "热门推荐": "2168",  # 默认颜值分类作为推荐
+    "颜值": "2168",
+    "娱乐天地": "100022",
+    "星秀": "1663",
+    "户外": "2165",
+    "一起看": "2135",
+    "二次元": "2633",
+    "虚拟偶像": "6055",
     "英雄联盟": "1",
-    "王者荣耀": "2633",
-    "和平精英": "2793",
-    "穿越火线": "2168",
-    "DNF": "36",
-    "绝地求生": "2828",
-    "主机游戏": "2837",
-    "娱乐天地": "1994",
-    "颜值": "2130",
-    "户外": "2160",
-    "手游休闲": "3027",
-    "网络游戏": "2020",
-    "单机游戏": "2019",
-    "电竞赛事": "2015",
-    "体育": "2028",
-    "教育": "2026",
-    "其它": "2000"
+    "CS2": "862",
+    "穿越火线": "4",
+    "无畏契约": "5937",
+    "王者荣耀": "2336",
+    "和平精英": "3203",
+    "原神": "5489",
+    "崩坏星穹铁道": "7349",
+    "暗区突围": "7209",
+    "主机游戏": "100032",
+    "我的世界": "1732",
+    "单机热游": "100002",
+    "手游休闲": "100004",
 }
 
 CACHE = {}
@@ -84,7 +91,6 @@ class Spider(Spider):
             except Exception:
                 pass
 
-        # 单值超时，兼容 Android Python 环境
         self.timeout = self.cfg.get('timeout', 30)
         self.max_retries = self.cfg.get('max_retries', 3)
         self.cache_ttl = self.cfg.get('cache_ttl', CACHE_TTL)
@@ -121,64 +127,135 @@ class Spider(Spider):
                 r.encoding = 'utf-8'
                 if r.status_code == 200:
                     return r.json()
-            except Exception as e:
+            except Exception:
                 if attempt == self.max_retries - 1:
                     pass
                 time.sleep(0.5 * (attempt + 1))
         return None
 
-    def _get_anti_code(self, room_id):
+    # ===== 核心签名算法（移植自 JS 版 lazy） =====
+    def _get_real_flv_url(self, live_url):
+        """
+        JS 版 getRealUrl 逻辑：
+        1. 解析 URL 参数
+        2. 从 fm 参数 base64 解码获取 p
+        3. 组装签名字符串 [p, t, s, f, ll] -> md5
+        4. 返回 flv 地址
+        """
         try:
-            t = str(int(time.time() * 1000))
-            seq = str(random.randint(100000, 999999))
-            s = f"{room_id}{t}{seq}huya"
-            md5 = hashlib.md5(s.encode()).hexdigest()
-            return md5, t, seq
+            parsed = urlparse(live_url)
+            base_url = parsed.scheme + "://" + parsed.netloc + parsed.path
+            params = parse_qs(parsed.query, keep_blank_values=True)
+
+            # 提取前3个参数和剩余参数
+            n = {}
+            c_tmp2 = []
+            for i, (k, v) in enumerate(params.items()):
+                if i < 3:
+                    n[k] = v[0]
+                else:
+                    c_tmp2.append(f"{k}={v[0]}")
+
+            if len(c_tmp2) > 0:
+                last = c_tmp2[-1]
+                kv = last.split('=', 1)
+                if len(kv) == 2:
+                    n[kv[0]] = kv[1]
+                c_tmp2 = c_tmp2[:-1]
+
+            fm = n.get('fm', '')
+            if not fm:
+                return live_url.replace('hls', 'flv').replace('m3u8', 'flv')
+
+            # base64 解码 fm 获取 p
+            try:
+                u = base64.b64decode(fm).decode('utf-8')
+            except Exception:
+                return live_url.replace('hls', 'flv').replace('m3u8', 'flv')
+            p = u.split('_')[0]
+
+            s = parsed.path.split('/')[-1].replace('.flv', '').replace('.m3u8', '')
+            f = str(int(time.time() * 1000)) + '0000'
+            ll = n.get('wsTime', '0')
+            t = '0'
+
+            h = '_'.join([p, t, s, f, ll])
+            m = hashlib.md5(h.encode()).hexdigest()
+
+            # 重组 URL，强制 flv
+            new_query = f"wsSecret={m}&wsTime={ll}&u={t}&seqid={f}"
+            if c_tmp2:
+                new_query += '&' + '&'.join(c_tmp2)
+            real_url = base_url + '?' + new_query
+            return real_url.replace('hls', 'flv').replace('m3u8', 'flv')
         except Exception:
-            return "", "", ""
+            return live_url.replace('hls', 'flv').replace('m3u8', 'flv')
+
+    def _get_play_url(self, room_id):
+        """获取真实播放地址（参考 JS 版 lazy）"""
+        # 1. 先获取 profileRoom 接口返回的 flv 多线路
+        url = f"https://mp.huya.com/cache.php?m=Live&do=profileRoom&roomid={room_id}"
+        data = self._fetch_json(url)
+        if not data or data.get('status') != 200:
+            return ""
+        try:
+            stream = data.get('data', {}).get('stream', {})
+            flv = stream.get('flv', {})
+            multi = flv.get('multiLine', [])
+            if not multi:
+                return ""
+            # 取第一条线路
+            raw_url = multi[0].get('url', '')
+            if not raw_url:
+                return ""
+            # 2. 签名转换为真实 flv 地址
+            return self._get_real_flv_url(raw_url)
+        except Exception:
+            return ""
 
     def homeContent(self, filter):
         result = {
             "class": [{"type_id": k, "type_name": k} for k in self._categories],
-            "list": self._get_live_list("0", 1)
+            "list": self._get_live_list("2168", 1)  # 默认颜值分类
         }
         filters = {}
         for cat_name in self._categories:
-            filters[cat_name] = [{"key": "class", "name": "分类", "value": [{"n": "全部", "v": ""}]}]
+            filters[cat_name] = [{"key": "cateId", "name": "分类", "value": [{"n": "全部", "v": ""}]}]
         result["filters"] = filters
         return result
 
     def homeVideoContent(self):
-        return {"list": self._get_live_list("0", 1)}
+        return {"list": self._get_live_list("2168", 1)}
 
     def categoryContent(self, tid, pg, filter, extend):
         cat_name = unquote(str(tid or '')).strip()
         if not cat_name or cat_name not in self._categories:
             return {'list': [], 'page': 1, 'pagecount': 0, 'limit': 20, 'total': 0}
 
-        game_id = CATEGORIES.get(cat_name, "0")
+        cate_id = CATEGORIES.get(cat_name, "2168")
         page = int(pg) if str(pg).isdigit() else 1
         return {
-            "list": self._get_live_list(game_id, page),
+            "list": self._get_live_list(cate_id, page),
             "page": page,
             "pagecount": 99,
             "limit": 20,
             "total": 9999
         }
 
-    def _get_live_list(self, game_id, page):
-        ck = f"list_{game_id}_{page}"
+    def _get_live_list(self, cate_id, page):
+        ck = f"list_{cate_id}_{page}"
         cached = self._cache_get(ck)
         if cached:
             return cached
 
+        # 参考 JS 版 homeUrl: /cache.php?m=LiveList&do=getLiveListByPage&gameId=2168&tagAll=0&page=1
         url = "https://www.huya.com/cache.php"
         params = {
             "m": "LiveList",
             "do": "getLiveListByPage",
-            "gameId": game_id,
-            "page": page,
-            "pageSize": 20
+            "gameId": cate_id,
+            "tagAll": "0",
+            "page": page
         }
         data = self._fetch_json(url, params)
         items = []
@@ -186,48 +263,45 @@ class Spider(Spider):
             for room in data.get("data", {}).get("datas", []):
                 items.append({
                     "vod_id": str(room.get("profileRoom", "")),
-                    "vod_name": room.get("roomName", "未知标题"),
+                    "vod_name": room.get("introduction", "未知标题"),
                     "vod_pic": room.get("screenshot", "") or room.get("avatar180", ""),
-                    "vod_remarks": f"{room.get('nick', '未知主播')} | {room.get('totalCount', 0)}热度"
+                    "vod_remarks": f"👁{room.get('totalCount', 0)} 🆙{room.get('nick', '未知主播')}"
                 })
         self._cache_set(ck, items)
         return items
 
     def searchContent(self, key, quick, pg="1"):
         page = int(pg) if str(pg).isdigit() else 1
-        url = "https://search.huya.com/api/search"
-        params = {"kw": key, "page": page, "pageSize": 20}
+        # 参考 JS 版 searchUrl
+        url = "https://search.cdn.huya.com/"
+        params = {
+            "m": "Search",
+            "do": "getSearchContent",
+            "q": key,
+            "uid": "0",
+            "v": "4",
+            "typ": "-5",
+            "livestate": "0",
+            "rows": "20",
+            "start": str((page - 1) * 20)
+        }
         data = self._fetch_json(url, params)
         items = []
         if data and data.get("status") == 200:
-            for room in data.get("data", {}).get("list", []):
+            # JS 版: json:response.3.docs;game_roomName;game_screenshot;game_nick;room_id
+            docs = data.get("response", [{}])[3].get("docs", []) if len(data.get("response", [])) > 3 else []
+            for room in docs:
                 items.append({
-                    "vod_id": str(room.get("roomId", "")),
-                    "vod_name": room.get("roomName", "未知标题"),
-                    "vod_pic": room.get("roomPic", ""),
-                    "vod_remarks": f"{room.get('nick', '未知主播')} | {room.get('totalCount', 0)}热度"
+                    "vod_id": str(room.get("room_id", "")),
+                    "vod_name": room.get("game_roomName", "未知标题"),
+                    "vod_pic": room.get("game_screenshot", ""),
+                    "vod_remarks": f"👁{room.get('game_totalCount', 0)} 🆙{room.get('game_nick', '未知主播')}"
                 })
         return {"list": items, "page": page}
 
     def detailContent(self, ids):
         room_id = ids[0] if isinstance(ids, list) else ids
-        anti_code, tt, seq = self._get_anti_code(room_id)
-        url = "https://www.huya.com/liveapi/room/getLiveUrl"
-        params = {
-            "roomId": room_id,
-            "antiCode": anti_code,
-            "tt": tt,
-            "seq": seq,
-            "line": "hls"
-        }
-        data = self._fetch_json(url, params)
-        play_url = ""
-        if data and data.get("status") == 200:
-            stream = data.get("data", {}).get("stream", {})
-            if "hls" in stream and stream["hls"]:
-                play_url = stream["hls"][0].get("url", "")
-            elif "flv" in stream and stream["flv"]:
-                play_url = stream["flv"][0].get("url", "")
+        play_url = self._get_play_url(room_id)
 
         return {
             "list": [{
@@ -244,7 +318,7 @@ class Spider(Spider):
         if not url:
             return {"parse": 0, "playUrl": "", "url": "", "header": HEADERS}
         header = dict(HEADERS)
-        header["Referer"] = "https://www.huya.com/"
+        header["Referer"] = "https://m.huya.com/"
         return {"parse": 0, "playUrl": "", "url": url, "header": header}
 
     def isVideoFormat(self, url):
