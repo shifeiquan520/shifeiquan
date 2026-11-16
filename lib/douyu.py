@@ -113,65 +113,10 @@ class Spider(Spider):
         return None
 
     def _get_play_url(self, room_id):
-        """获取斗鱼真实播放地址 - 返回两个代理选项"""
+        """获取斗鱼真实播放地址 - 单代理版本"""
 
-        proxy1 = "https://live.ottiptv.cc/douyu/" + str(room_id)
-        proxy2 = "https://live.iill.top/douyu/" + str(room_id)
-
-        # 返回格式：代理名称$代理地址
-        return f"代理1${proxy1}#代理2${proxy2}"
-
-        # 2. 房间信息接口
-        url2 = "https://www.douyu.com/api/room/roomInfo"
-        data2 = self._fetch_json(url2, params={"roomId": room_id})
-        if data2 and data2.get("code") == 0:
-            room = data2.get("data", {}).get("room", {})
-            for key in ("hls_url", "flv_url", "rtmp_url", "rtmp_live"):
-                val = room.get(key, "")
-                if val:
-                    if key == "rtmp_url":
-                        rtmp_live = room.get("rtmp_live", "")
-                        return val + rtmp_live if rtmp_live else val
-                    return val
-            rtmp = room.get("rtmp_url", "")
-            rtmp_live = room.get("rtmp_live", "")
-            if rtmp and rtmp_live:
-                return rtmp + rtmp_live
-            if rtmp_live:
-                return rtmp_live
-
-        # 3. 移动端 room/list 接口
-        url3 = "https://m.douyu.com/api/room/list"
-        data3 = self._fetch_json(url3, params={"roomIds": room_id, "aid": "android"})
-        if data3 and data3.get("code") == 0:
-            room = data3.get("data", {}).get("list", [{}])[0]
-            for key in ("hlsUrl", "flvUrl", "rtmpUrl", "hls_url", "flv_url", "rtmp_url", "rtmp_live"):
-                val = room.get(key, "")
-                if val:
-                    if "rtmp" in key.lower() and "live" not in key.lower():
-                        rtmp_live = room.get("rtmp_live") or room.get("rtmpLive", "")
-                        return val + rtmp_live if rtmp_live else val
-                    return val
-
-        # 4. 第三方获取播放地址
-        url4 = "https://www.douyu.com/lapi/live/thirdPart/getPlay/" + str(room_id)
-        data4 = self._fetch_json(url4)
-        if data4 and data4.get("code") == 0:
-            play_url = data4.get("data", {}).get("play_url", "")
-            if play_url:
-                return play_url
-
-        # 5. homeH5Enc 接口
-        url5 = "https://www.douyu.com/swf_api/homeH5Enc"
-        data5 = self._fetch_json(url5, params={"roomId": room_id})
-        if data5 and data5.get("code") == 0:
-            d5 = data5.get("data", {})
-            for key in ("hls_url", "flv_url", "rtmp_live", "rtmp_url"):
-                val = d5.get(key, "")
-                if val:
-                    return val
-
-        return ""
+        # 单代理: https://live.ottiptv.cc/douyu/
+        return "https://live.ottiptv.cc/douyu/" + str(room_id)
 
     def homeContent(self, filter):
         result = {
@@ -249,17 +194,15 @@ class Spider(Spider):
         room_id = ids[0] if isinstance(ids, list) else ids
         # 详情页链接加前缀（参考斗鱼直播.json）
         detail_id = "http://huanqiuzhibo.cn/manifest/douyu.php?id=" + str(room_id)
-
-        proxy1 = "https://live.ottiptv.cc/douyu/" + str(room_id)
-        proxy2 = "https://live.iill.top/douyu/" + str(room_id)
+        play_url = "https://live.ottiptv.cc/douyu/" + str(room_id)
 
         return {
             "list": [{
                 "vod_id": detail_id,
                 "vod_name": "斗鱼直播间_" + str(room_id),
                 "vod_pic": "",
-                "vod_play_from": "代理1$$$代理2",
-                "vod_play_url": proxy1 + "$$$" + proxy2
+                "vod_play_from": "斗鱼直播",
+                "vod_play_url": "直播$" + play_url
             }]
         }
 
