@@ -81,7 +81,8 @@ class Spider(Spider):
             except Exception:
                 pass
 
-        self.timeout = (self.cfg.get('timeout', 15), self.cfg.get('read_timeout', 30))
+        # 单值超时，兼容 Android Python 环境
+        self.timeout = self.cfg.get('timeout', 30)
         self.max_retries = self.cfg.get('max_retries', 3)
         self.cache_ttl = self.cfg.get('cache_ttl', CACHE_TTL)
 
@@ -117,7 +118,7 @@ class Spider(Spider):
                 r.encoding = 'utf-8'
                 if r.status_code == 200:
                     return r.json()
-            except Exception:
+            except Exception as e:
                 if attempt == self.max_retries - 1:
                     pass
                 time.sleep(0.5 * (attempt + 1))
