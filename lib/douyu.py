@@ -158,7 +158,7 @@ class Spider(Spider):
         # 3. 移动端 room/list 接口
         url3 = "https://m.douyu.com/api/room/list"
         data3 = self._fetch_json(url3, params={"roomIds": room_id, "aid": "android"})
-        if data3 and data3.get("error") == 0:
+        if data3 and data3.get("code") == 0:
             room = data3.get("data", {}).get("list", [{}])[0]
             for key in ("hlsUrl", "flvUrl", "rtmpUrl", "hls_url", "flv_url", "rtmp_url", "rtmp_live"):
                 val = room.get(key, "")
@@ -179,7 +179,7 @@ class Spider(Spider):
         # 5. homeH5Enc 接口
         url5 = "https://www.douyu.com/swf_api/homeH5Enc"
         data5 = self._fetch_json(url5, params={"roomId": room_id})
-        if data5 and data5.get("error") == 0:
+        if data5 and data5.get("code") == 0:
             d5 = data5.get("data", {})
             for key in ("hls_url", "flv_url", "rtmp_live", "rtmp_url"):
                 val = d5.get(key, "")
@@ -228,13 +228,15 @@ class Spider(Spider):
         params = {"page": page, "type": cate_id}
         data = self._fetch_json(url, params)
         items = []
-        if data and data.get("error") == 0:
+        if data and data.get("code") == 0:
             for room in data.get("data", {}).get("list", []):
+                if room.get("isLive") != 1:
+                    continue
                 items.append({
                     "vod_id": str(room.get("rid", "")),
                     "vod_name": room.get("roomName", "未知标题"),
                     "vod_pic": room.get("roomSrc", ""),
-                    "vod_remarks": room.get("nickname", "未知主播") + " | \u270f" + str(room.get("online", 0))
+                    "vod_remarks": room.get("nickname", "未知主播") + " | \u270f" + str(room.get("hn", ""))
                 })
         self._cache_set(ck, items)
         return items
@@ -246,13 +248,15 @@ class Spider(Spider):
         params = {"sk": key, "offset": (page - 1) * 20, "limit": 20}
         data = self._fetch_json(url, params)
         items = []
-        if data and data.get("error") == 0:
+        if data and data.get("code") == 0:
             for room in data.get("data", {}).get("list", []):
+                if room.get("isLive") != 1:
+                    continue
                 items.append({
                     "vod_id": str(room.get("roomId", "")),
                     "vod_name": room.get("roomName", "未知标题"),
                     "vod_pic": room.get("roomSrc", ""),
-                    "vod_remarks": room.get("nickname", "未知主播") + " | \u270f" + str(room.get("online", 0))
+                    "vod_remarks": room.get("nickname", "未知主播") + " | \u270f" + str(room.get("hn", ""))
                 })
         return {"list": items, "page": page}
 
