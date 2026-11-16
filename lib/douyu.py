@@ -113,17 +113,13 @@ class Spider(Spider):
         return None
 
     def _get_play_url(self, room_id):
-        """获取斗鱼真实播放地址 - 优先代理，再官方API兜底"""
+        """获取斗鱼真实播放地址 - 返回两个代理选项"""
 
-        # 代理1: https://live.ottiptv.cc/douyu/
-        # 代理2: https://live.iill.top/douyu/
         proxy1 = "https://live.ottiptv.cc/douyu/" + str(room_id)
         proxy2 = "https://live.iill.top/douyu/" + str(room_id)
 
-        # 直接返回代理地址（优先尝试代理1，播放器会自动处理）
-        # 如需验证可用性，可在此处添加 HEAD 请求检查
-        # 这里直接返回代理1，播放失败时播放器会自动尝试备选
-        return proxy1
+        # 返回格式：代理名称$代理地址
+        return f"代理1${proxy1}#代理2${proxy2}"
 
         # 2. 房间信息接口
         url2 = "https://www.douyu.com/api/room/roomInfo"
@@ -253,15 +249,17 @@ class Spider(Spider):
         room_id = ids[0] if isinstance(ids, list) else ids
         # 详情页链接加前缀（参考斗鱼直播.json）
         detail_id = "http://huanqiuzhibo.cn/manifest/douyu.php?id=" + str(room_id)
-        play_url = self._get_play_url(room_id)
+
+        proxy1 = "https://live.ottiptv.cc/douyu/" + str(room_id)
+        proxy2 = "https://live.iill.top/douyu/" + str(room_id)
 
         return {
             "list": [{
                 "vod_id": detail_id,
                 "vod_name": "斗鱼直播间_" + str(room_id),
                 "vod_pic": "",
-                "vod_play_from": "斗鱼直播",
-                "vod_play_url": "直播$" + play_url if play_url else ""
+                "vod_play_from": "代理1$$$代理2",
+                "vod_play_url": proxy1 + "$$$" + proxy2
             }]
         }
 
