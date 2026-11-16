@@ -109,16 +109,6 @@
     },  
 
 
- {
-      "key": "csp_JianPian",
-      "name": "荐片｜APP",
-      "type": 3,
-      "api": "csp_JianPian",
-      "playerType": 1,
-      "searchable": 1,
-      "quickSearch": 1,
-      "filterable": 1
-   ,"jar": "./jar/xyq.jar" },
 
  {
       "key": "热播影视",
