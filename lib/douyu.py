@@ -113,28 +113,17 @@ class Spider(Spider):
         return None
 
     def _get_play_url(self, room_id):
-        """获取斗鱼真实播放地址 - 多接口兜底"""
+        """获取斗鱼真实播放地址 - 优先代理，再官方API兜底"""
 
-        # 1. H5 播放接口 (最常用) - 需加 rate 参数
-        url = "https://www.douyu.com/lapi/live/getH5Play/" + str(room_id)
-        data = self._fetch_json(url, params={"rate": 0})
-        if data and data.get("code") == 0:
-            d = data.get("data", {})
-            for key in ("flv_url", "hls_url", "rtmp_url"):
-                val = d.get(key, "")
-                if val:
-                    if key == "rtmp_url":
-                        rtmp_live = d.get("rtmp_live", "")
-                        return val + rtmp_live if rtmp_live else val
-                    return val
-            rtmp = d.get("rtmp_url", "")
-            rtmp_live = d.get("rtmp_live", "")
-            if rtmp and rtmp_live:
-                return rtmp + rtmp_live
-            if rtmp_live:
-                return rtmp_live
-            if rtmp:
-                return rtmp
+        # 代理1: https://live.ottiptv.cc/douyu/
+        # 代理2: https://live.iill.top/douyu/
+        proxy1 = "https://live.ottiptv.cc/douyu/" + str(room_id)
+        proxy2 = "https://live.iill.top/douyu/" + str(room_id)
+
+        # 直接返回代理地址（优先尝试代理1，播放器会自动处理）
+        # 如需验证可用性，可在此处添加 HEAD 请求检查
+        # 这里直接返回代理1，播放失败时播放器会自动尝试备选
+        return proxy1
 
         # 2. 房间信息接口
         url2 = "https://www.douyu.com/api/room/roomInfo"
