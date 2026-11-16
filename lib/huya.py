@@ -1,30 +1,49 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
-虎牙直播 - 影视仓插件
+虎牙直播 - 影视仓插件（修复版，对齐采集之王架构）
 支持：分类浏览、直播间列表、播放地址获取
 """
 
 import json
 import re
 import time
-import requests
+import warnings
 import hashlib
 import random
+from urllib.parse import unquote
+
+import requests
+
+try:
+    warnings.filterwarnings('ignore')
+    requests.packages.urllib3.disable_warnings()
+except Exception:
+    pass
 
 try:
     from base.spider import Spider
 except ImportError:
     class Spider:
-        pass
+        def getName(self): return ''
+        def init(self, extend=''): pass
+        def destroy(self): pass
+        def homeContent(self, filter): return {'class': [], 'list': []}
+        def homeVideoContent(self): return {'list': []}
+        def categoryContent(self, tid, pg, filter, extend): return {'list': [], 'page': 1, 'pagecount': 0, 'limit': 20, 'total': 0}
+        def detailContent(self, ids): return {'list': []}
+        def searchContent(self, key, quick, pg='1'): return {'list': [], 'page': 1}
+        def playerContent(self, flag, pid, vipFlags): return {'parse': 0, 'playUrl': '', 'url': '', 'header': {}}
+        def isVideoFormat(self, url): return False
+        def manualVideoCheck(self): return False
+        def localProxy(self, param): return None
 
-# 请求头
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Referer": "https://www.huya.com/",
     "Origin": "https://www.huya.com"
 }
 
-# 游戏分类映射：显示名称 -> gameId
 CATEGORIES = {
     "热门推荐": "0",
     "英雄联盟": "1",
@@ -46,7 +65,6 @@ CATEGORIES = {
     "其它": "2000"
 }
 
-# 缓存
 CACHE = {}
 CACHE_TTL = 300
 
@@ -55,21 +73,39 @@ class Spider(Spider):
     def getName(self):
         return "虎牙直播"
 
-    def init(self, extend=""):
+    def init(self, extend=''):
+        self.destroy()
+        self.cfg = {}
+        if isinstance(extend, dict):
+            self.cfg.update(extend)
+        elif isinstance(extend, str) and extend:
+            try:
+                self.cfg.update(json.loads(extend))
+            except Exception:
+                pass
+
+        self.timeout = (self.cfg.get('timeout', 15), self.cfg.get('read_timeout', 30))
+        self.max_retries = self.cfg.get('max_retries', 3)
+        self.cache_ttl = self.cfg.get('cache_ttl', CACHE_TTL)
+
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
         self.session.verify = False
 
+        self._categories = list(CATEGORIES.keys())
+
     def destroy(self):
         try:
-            self.session.close()
+            if self.session:
+                self.session.close()
         except Exception:
             pass
+        self.session = None
 
     def _cache_get(self, key):
         if key in CACHE:
             ts, val = CACHE[key]
-            if time.time() - ts < CACHE_TTL:
+            if time.time() - ts < self.cache_ttl:
                 return val
             del CACHE[key]
         return None
@@ -78,34 +114,48 @@ class Spider(Spider):
         CACHE[key] = (time.time(), val)
 
     def _fetch_json(self, url, params=None):
-        try:
-            r = self.session.get(url, params=params, timeout=10)
-            if r.status_code == 200:
-                return r.json()
-        except Exception:
-            pass
+        for attempt in range(self.max_retries):
+            try:
+                r = self.session.get(url, params=params, timeout=self.timeout)
+                r.encoding = 'utf-8'
+                if r.status_code == 200:
+                    return r.json()
+            except Exception:
+                if attempt == self.max_retries - 1:
+                    pass
+                time.sleep(0.5 * (attempt + 1))
         return None
+
+    def _get_anti_code(self, room_id):
+        try:
+            t = str(int(time.time() * 1000))
+            seq = str(random.randint(100000, 999999))
+            s = f"{room_id}{t}{seq}huya"
+            md5 = hashlib.md5(s.encode()).hexdigest()
+            return md5, t, seq
+        except Exception:
+            return "", "", ""
 
     def homeContent(self, filter):
         result = {
-            "class": [{"type_id": k, "type_name": k} for k in CATEGORIES.keys()],
+            "class": [{"type_id": k, "type_name": k} for k in self._categories],
             "list": self._get_live_list("0", 1)
         }
-        if filter:
-            result["filters"] = self._build_filters()
+        filters = {}
+        for cat_name in self._categories:
+            filters[cat_name] = [{"key": "class", "name": "分类", "value": [{"n": "全部", "v": ""}]}]
+        result["filters"] = filters
         return result
 
     def homeVideoContent(self):
         return {"list": self._get_live_list("0", 1)}
 
-    def _build_filters(self):
-        filters = {}
-        for cat_name in CATEGORIES.keys():
-            filters[cat_name] = [{"key": "class", "name": "分类", "value": [{"n": "全部", "v": ""}]}]
-        return filters
-
     def categoryContent(self, tid, pg, filter, extend):
-        game_id = CATEGORIES.get(tid, "0")
+        cat_name = unquote(str(tid or '')).strip()
+        if not cat_name or cat_name not in self._categories:
+            return {'list': [], 'page': 1, 'pagecount': 0, 'limit': 20, 'total': 0}
+
+        game_id = CATEGORIES.get(cat_name, "0")
         page = int(pg) if str(pg).isdigit() else 1
         return {
             "list": self._get_live_list(game_id, page),
@@ -158,20 +208,8 @@ class Spider(Spider):
                 })
         return {"list": items, "page": page}
 
-    def _get_anti_code(self, room_id):
-        """获取虎牙防盗链签名"""
-        try:
-            t = str(int(time.time() * 1000))
-            seq = str(random.randint(100000, 999999))
-            s = f"{room_id}{t}{seq}huya"
-            md5 = hashlib.md5(s.encode()).hexdigest()
-            return md5, t, seq
-        except Exception:
-            return "", "", ""
-
     def detailContent(self, ids):
         room_id = ids[0] if isinstance(ids, list) else ids
-        # 获取播放地址
         anti_code, tt, seq = self._get_anti_code(room_id)
         url = "https://www.huya.com/liveapi/room/getLiveUrl"
         params = {
@@ -185,10 +223,8 @@ class Spider(Spider):
         play_url = ""
         if data and data.get("status") == 200:
             stream = data.get("data", {}).get("stream", {})
-            # 优先 HLS (m3u8)
             if "hls" in stream and stream["hls"]:
                 play_url = stream["hls"][0].get("url", "")
-            # 备用 FLV
             elif "flv" in stream and stream["flv"]:
                 play_url = stream["flv"][0].get("url", "")
 
