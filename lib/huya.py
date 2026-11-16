@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-虎牙直播 - 影视仓插件（参考 JS 版修正 API）
+虎牙直播 - 影视仓插件（严格对齐 JS 版签名算法）
 支持：分类浏览、直播间列表、播放地址获取
 """
 
@@ -10,7 +10,7 @@ import time
 import warnings
 import hashlib
 import base64
-from urllib.parse import unquote, urlparse, parse_qs
+from urllib.parse import unquote, urlparse
 
 import requests
 
@@ -38,7 +38,6 @@ except ImportError:
         def localProxy(self, param): return None
 
 
-# 移动端 UA
 MOBILE_UA = "Mozilla/5.0 (Linux; Android 11; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
 HEADERS = {
@@ -47,9 +46,8 @@ HEADERS = {
     "Origin": "https://m.huya.com"
 }
 
-# 分类映射：显示名称 -> cateId (参考 JS 版 class_url 和 filter_def)
 CATEGORIES = {
-    "热门推荐": "2168",  # 默认颜值分类作为推荐
+    "热门推荐": "2168",
     "颜值": "2168",
     "娱乐天地": "100022",
     "星秀": "1663",
@@ -133,82 +131,119 @@ class Spider(Spider):
                 time.sleep(0.5 * (attempt + 1))
         return None
 
-    # ===== 核心签名算法（移植自 JS 版 lazy） =====
+    # ===== 核心签名算法：严格移植 JS 版 getRealUrl =====
     def _get_real_flv_url(self, live_url):
         """
-        JS 版 getRealUrl 逻辑：
-        1. 解析 URL 参数
-        2. 从 fm 参数 base64 解码获取 p
-        3. 组装签名字符串 [p, t, s, f, ll] -> md5
-        4. 返回 flv 地址
+        JS 逻辑：
+        1. let [i, b] = live_url.split('?');
+        2. let r = i.split('/').pop();
+        3. let s = r.replace(/\.(flv|m3u8)/, '');
+        4. let c_tmp = b.split('&').filter(n => n);
+        5. 前3个参数进 n 对象，其余进 c_tmp2 数组
+        6. c_tmp2 最后一个也合并进 n
+        7. fm = decodeURIComponent(n.fm).split('&')[0];
+        8. u = base64Decode(fm); p = u.split('_')[0];
+        9. f = timestamp+'0000'; ll = n.wsTime; t = '0';
+        10. h = [p, t, s, f, ll].join('_'); m = md5(h);
+        11. 返回 i + '?wsSecret=' + m + '&wsTime=' + ll + '&u=' + t + '&seqid=' + f + '&' + c_tmp2.pop()
+        12. 替换 hls/m3u8 -> flv
         """
         try:
-            parsed = urlparse(live_url)
-            base_url = parsed.scheme + "://" + parsed.netloc + parsed.path
-            params = parse_qs(parsed.query, keep_blank_values=True)
-
-            # 提取前3个参数和剩余参数
+            # 1. 分离 base_url 和 query
+            if '?' not in live_url:
+                return live_url.replace('hls', 'flv').replace('m3u8', 'flv')
+            
+            i, b = live_url.split('?', 1)
+            
+            # 2. 提取 s (文件名去后缀)
+            r = i.split('/')[-1]
+            s = r
+            if s.endswith('.flv'):
+                s = s[:-4]
+            elif s.endswith('.m3u8'):
+                s = s[:-5]
+            
+            # 3. 解析 query 参数，按顺序处理
+            c_tmp = [x for x in b.split('&') if x]
             n = {}
             c_tmp2 = []
-            for i, (k, v) in enumerate(params.items()):
-                if i < 3:
-                    n[k] = v[0]
-                else:
-                    c_tmp2.append(f"{k}={v[0]}")
-
-            if len(c_tmp2) > 0:
+            
+            for idx, tmp in enumerate(c_tmp):
+                if '=' in tmp:
+                    k, v = tmp.split('=', 1)
+                    if idx < 3:
+                        n[k] = v
+                    else:
+                        c_tmp2.append(tmp)
+            
+            # 4. c_tmp2 最后一个合并进 n
+            if c_tmp2:
                 last = c_tmp2[-1]
-                kv = last.split('=', 1)
-                if len(kv) == 2:
-                    n[kv[0]] = kv[1]
-                c_tmp2 = c_tmp2[:-1]
-
+                if '=' in last:
+                    k, v = last.split('=', 1)
+                    n[k] = v
+            
+            # 5. 处理 fm 参数
             fm = n.get('fm', '')
             if not fm:
                 return live_url.replace('hls', 'flv').replace('m3u8', 'flv')
-
-            # base64 解码 fm 获取 p
+            
+            # decodeURIComponent -> unquote
+            fm = unquote(fm)
+            # split('&')[0]
+            fm = fm.split('&')[0]
+            
+            # base64 解码
             try:
                 u = base64.b64decode(fm).decode('utf-8')
             except Exception:
                 return live_url.replace('hls', 'flv').replace('m3u8', 'flv')
+            
             p = u.split('_')[0]
-
-            s = parsed.path.split('/')[-1].replace('.flv', '').replace('.m3u8', '')
+            
+            # 6. 时间戳参数
             f = str(int(time.time() * 1000)) + '0000'
             ll = n.get('wsTime', '0')
             t = '0'
-
+            
+            # 7. 计算签名
             h = '_'.join([p, t, s, f, ll])
             m = hashlib.md5(h.encode()).hexdigest()
-
-            # 重组 URL，强制 flv
-            new_query = f"wsSecret={m}&wsTime={ll}&u={t}&seqid={f}"
+            
+            # 8. 重组 URL
+            # c_tmp2.pop() 取最后一个
+            last_param = ''
             if c_tmp2:
-                new_query += '&' + '&'.join(c_tmp2)
-            real_url = base_url + '?' + new_query
+                last_param = '&' + c_tmp2[-1]
+            
+            real_url = f"{i}?wsSecret={m}&wsTime={ll}&u={t}&seqid={f}{last_param}"
+            
+            # 9. 强制 flv
             return real_url.replace('hls', 'flv').replace('m3u8', 'flv')
+            
         except Exception:
             return live_url.replace('hls', 'flv').replace('m3u8', 'flv')
 
     def _get_play_url(self, room_id):
-        """获取真实播放地址（参考 JS 版 lazy）"""
-        # 1. 先获取 profileRoom 接口返回的 flv 多线路
+        """获取真实播放地址"""
+        # 请求 profileRoom 接口
         url = f"https://mp.huya.com/cache.php?m=Live&do=profileRoom&roomid={room_id}"
         data = self._fetch_json(url)
         if not data or data.get('status') != 200:
             return ""
+        
         try:
             stream = data.get('data', {}).get('stream', {})
             flv = stream.get('flv', {})
             multi = flv.get('multiLine', [])
             if not multi:
                 return ""
-            # 取第一条线路
+            
             raw_url = multi[0].get('url', '')
             if not raw_url:
                 return ""
-            # 2. 签名转换为真实 flv 地址
+            
+            # 签名转换
             return self._get_real_flv_url(raw_url)
         except Exception:
             return ""
@@ -216,7 +251,7 @@ class Spider(Spider):
     def homeContent(self, filter):
         result = {
             "class": [{"type_id": k, "type_name": k} for k in self._categories],
-            "list": self._get_live_list("2168", 1)  # 默认颜值分类
+            "list": self._get_live_list("2168", 1)
         }
         filters = {}
         for cat_name in self._categories:
@@ -248,7 +283,6 @@ class Spider(Spider):
         if cached:
             return cached
 
-        # 参考 JS 版 homeUrl: /cache.php?m=LiveList&do=getLiveListByPage&gameId=2168&tagAll=0&page=1
         url = "https://www.huya.com/cache.php"
         params = {
             "m": "LiveList",
@@ -272,7 +306,6 @@ class Spider(Spider):
 
     def searchContent(self, key, quick, pg="1"):
         page = int(pg) if str(pg).isdigit() else 1
-        # 参考 JS 版 searchUrl
         url = "https://search.cdn.huya.com/"
         params = {
             "m": "Search",
@@ -288,7 +321,6 @@ class Spider(Spider):
         data = self._fetch_json(url, params)
         items = []
         if data and data.get("status") == 200:
-            # JS 版: json:response.3.docs;game_roomName;game_screenshot;game_nick;room_id
             docs = data.get("response", [{}])[3].get("docs", []) if len(data.get("response", [])) > 3 else []
             for room in docs:
                 items.append({
