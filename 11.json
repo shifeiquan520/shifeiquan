@@ -64,25 +64,25 @@
     }, 
 {"key":"豆瓣2","name":"豆瓣推荐","type":3,"api":"csp_Douban","searchable":0 },
 {
-      "key": "DRJS_虎牙",
-      "name": "虎牙直播(JS)",
-      "type": 3,
-      "api": "https://gh-proxy.com/https://raw.githubusercontent.com/shifeiquan520/shifeiquan/refs/heads/main/js/lib/drpy2.min.js",
-      "ext": "https://gh-proxy.com/https://raw.githubusercontent.com/shifeiquan520/shifeiquan/refs/heads/main/lib/%E8%99%8E%E7%89%99%E7%9B%B4%E6%92%AD.js",
-      "searchable": 0,
-      "quickSearch": 0,
-      "filterable": 1
-    },
+  "key": "斗鱼直播",
+  "name": "斗鱼直播",
+  "type": 3,
+  "api": "./py/douyu.py",
+  "searchable": 1,
+  "quickSearch": 1,
+  "filterable": 1,
+  "timeout": 60
+},
 {
-      "key": "DRJS_斗鱼",
-      "name": "斗鱼直播(JS)",
-      "type": 3,
-      "api": "https://gh-proxy.com/https://raw.githubusercontent.com/shifeiquan520/shifeiquan/refs/heads/main/js/lib/drpy2.min.js",
-      "ext": "https://gh-proxy.com/https://raw.githubusercontent.com/shifeiquan520/shifeiquan/refs/heads/main/lib/斗鱼直播.js",
-      "searchable": 0,
-      "quickSearch": 0,
-      "filterable": 1
-    },
+  "key": "虎牙直播",
+  "name": "虎牙直播",
+  "type": 3,
+  "api": "./py/huya.py",
+  "searchable": 1,
+  "quickSearch": 1,
+  "filterable": 1,
+  "timeout": 60
+},
 
 
 
