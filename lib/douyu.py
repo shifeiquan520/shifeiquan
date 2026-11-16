@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-斗鱼直播 - 影视仓插件（修复版，对齐采集之王架构）
+斗鱼直播 - 影视仓插件（修正 API）
 支持：分类浏览、直播间列表、播放地址获取
 """
 
@@ -37,29 +37,31 @@ except ImportError:
 
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Referer": "https://www.douyu.com/",
-    "Origin": "https://www.douyu.com"
+    "User-Agent": "Mozilla/5.0 (Linux; Android 11; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+    "Referer": "https://m.douyu.com/",
+    "Origin": "https://m.douyu.com"
 }
 
+# 斗鱼分类：显示名称 -> (cateId, childId)
+# 参考斗鱼移动端 API: https://www.douyu.com/gapi/rkc/directory/mixList/{cateId}_{childId}/{page}
 CATEGORIES = {
-    "热门推荐": "0_0",
-    "英雄联盟": "1_1",
-    "王者荣耀": "2_2",
-    "和平精英": "3_3",
-    "穿越火线": "4_4",
-    "DNF": "5_5",
-    "主机游戏": "6_6",
-    "娱乐天地": "7_7",
-    "颜值": "8_8",
-    "户外": "9_9",
-    "手游休闲": "10_10",
-    "网络游戏": "11_11",
-    "单机游戏": "12_12",
-    "电竞赛事": "13_13",
-    "体育": "14_14",
-    "教育": "15_15",
-    "其它": "16_16"
+    "热门推荐": ("0", "0"),
+    "英雄联盟": ("1", "1"),
+    "王者荣耀": ("2", "2"),
+    "和平精英": ("3", "3"),
+    "穿越火线": ("4", "4"),
+    "DNF": ("5", "5"),
+    "主机游戏": ("6", "6"),
+    "娱乐天地": ("7", "7"),
+    "颜值": ("8", "8"),
+    "户外": ("9", "9"),
+    "手游休闲": ("10", "10"),
+    "网络游戏": ("11", "11"),
+    "单机游戏": ("12", "12"),
+    "电竞赛事": ("13", "13"),
+    "体育": ("14", "14"),
+    "教育": ("15", "15"),
+    "其它": ("16", "16"),
 }
 
 CACHE = {}
@@ -81,7 +83,6 @@ class Spider(Spider):
             except Exception:
                 pass
 
-        # 单值超时，兼容 Android Python 环境
         self.timeout = self.cfg.get('timeout', 30)
         self.max_retries = self.cfg.get('max_retries', 3)
         self.cache_ttl = self.cfg.get('cache_ttl', CACHE_TTL)
@@ -118,16 +119,43 @@ class Spider(Spider):
                 r.encoding = 'utf-8'
                 if r.status_code == 200:
                     return r.json()
-            except Exception as e:
+            except Exception:
                 if attempt == self.max_retries - 1:
                     pass
                 time.sleep(0.5 * (attempt + 1))
         return None
 
+    def _get_play_url(self, room_id):
+        """获取斗鱼真实播放地址"""
+        # 1. 尝试 H5 接口
+        url = f"https://www.douyu.com/lapi/live/getH5Play/{room_id}"
+        data = self._fetch_json(url)
+        if data and data.get("code") == 0:
+            rtmp = data.get("data", {}).get("rtmp_url", "")
+            rtmp_live = data.get("data", {}).get("rtmp_live", "")
+            play_url = rtmp + rtmp_live if rtmp and rtmp_live else rtmp_live or rtmp
+            if play_url:
+                return play_url
+
+        # 2. 备用 betard 接口
+        url2 = f"https://www.douyu.com/betard/{room_id}"
+        data2 = self._fetch_json(url2)
+        if data2 and data2.get("code") == 0:
+            return data2.get("data", {}).get("room", {}).get("hls_url", "")
+
+        # 3. 移动端接口
+        url3 = f"https://m.douyu.com/api/room/list?roomIds={room_id}"
+        data3 = self._fetch_json(url3)
+        if data3 and data3.get("error") == 0:
+            room = data3.get("data", {}).get("list", [{}])[0]
+            return room.get("hlsUrl", "") or room.get("rtmpUrl", "")
+
+        return ""
+
     def homeContent(self, filter):
         result = {
             "class": [{"type_id": k, "type_name": k} for k in self._categories],
-            "list": self._get_live_list("0_0", 1)
+            "list": self._get_live_list("0", "0", 1)
         }
         filters = {}
         for cat_name in self._categories:
@@ -136,30 +164,31 @@ class Spider(Spider):
         return result
 
     def homeVideoContent(self):
-        return {"list": self._get_live_list("0_0", 1)}
+        return {"list": self._get_live_list("0", "0", 1)}
 
     def categoryContent(self, tid, pg, filter, extend):
         cat_name = unquote(str(tid or '')).strip()
         if not cat_name or cat_name not in self._categories:
             return {'list': [], 'page': 1, 'pagecount': 0, 'limit': 20, 'total': 0}
 
-        cat_key = CATEGORIES.get(cat_name, "0_0")
+        cate_id, child_id = CATEGORIES.get(cat_name, ("0", "0"))
         page = int(pg) if str(pg).isdigit() else 1
         return {
-            "list": self._get_live_list(cat_key, page),
+            "list": self._get_live_list(cate_id, child_id, page),
             "page": page,
             "pagecount": 99,
             "limit": 20,
             "total": 9999
         }
 
-    def _get_live_list(self, cat_key, page):
-        ck = f"list_{cat_key}_{page}"
+    def _get_live_list(self, cate_id, child_id, page):
+        ck = f"list_{cate_id}_{child_id}_{page}"
         cached = self._cache_get(ck)
         if cached:
             return cached
 
-        url = f"https://www.douyu.com/gapi/rkc/directory/mixList/{cat_key}/{page}"
+        # 使用移动端 API，更稳定
+        url = f"https://www.douyu.com/gapi/rkc/directory/mixList/{cate_id}_{child_id}/{page}"
         data = self._fetch_json(url)
         items = []
         if data and data.get("code") == 0:
@@ -168,7 +197,7 @@ class Spider(Spider):
                     "vod_id": str(room.get("rid", "")),
                     "vod_name": room.get("rn", "未知标题"),
                     "vod_pic": room.get("rs16", "") or room.get("rs1", ""),
-                    "vod_remarks": f"{room.get('nn', '未知主播')} | {room.get('ol', 0)}热度"
+                    "vod_remarks": f"{room.get('nn', '未知主播')} | 👁{room.get('ol', 0)}"
                 })
         self._cache_set(ck, items)
         return items
@@ -185,30 +214,18 @@ class Spider(Spider):
                     "vod_id": str(room.get("rid", "")),
                     "vod_name": room.get("rn", "未知标题"),
                     "vod_pic": room.get("rs16", "") or room.get("rs1", ""),
-                    "vod_remarks": f"{room.get('nn', '未知主播')} | {room.get('ol', 0)}热度"
+                    "vod_remarks": f"{room.get('nn', '未知主播')} | 👁{room.get('ol', 0)}"
                 })
         return {"list": items, "page": page}
 
     def detailContent(self, ids):
-        rid = ids[0] if isinstance(ids, list) else ids
-        url = f"https://www.douyu.com/lapi/live/getH5Play/{rid}"
-        data = self._fetch_json(url)
-        play_url = ""
-        if data and data.get("code") == 0:
-            rtmp = data.get("data", {}).get("rtmp_url", "")
-            rtmp_live = data.get("data", {}).get("rtmp_live", "")
-            play_url = rtmp + rtmp_live if rtmp and rtmp_live else rtmp_live or rtmp
-
-        if not play_url:
-            url2 = f"https://www.douyu.com/betard/{rid}"
-            data2 = self._fetch_json(url2)
-            if data2 and data2.get("code") == 0:
-                play_url = data2.get("data", {}).get("room", {}).get("hls_url", "")
+        room_id = ids[0] if isinstance(ids, list) else ids
+        play_url = self._get_play_url(room_id)
 
         return {
             "list": [{
-                "vod_id": str(rid),
-                "vod_name": f"斗鱼直播间_{rid}",
+                "vod_id": str(room_id),
+                "vod_name": f"斗鱼直播间_{room_id}",
                 "vod_pic": "",
                 "vod_play_from": "斗鱼直播",
                 "vod_play_url": f"直播${play_url}" if play_url else ""
@@ -220,7 +237,7 @@ class Spider(Spider):
         if not url:
             return {"parse": 0, "playUrl": "", "url": "", "header": HEADERS}
         header = dict(HEADERS)
-        header["Referer"] = "https://www.douyu.com/"
+        header["Referer"] = "https://m.douyu.com/"
         return {"parse": 0, "playUrl": "", "url": url, "header": header}
 
     def isVideoFormat(self, url):
