@@ -85,29 +85,7 @@
 },
 
 
-   {
-      "name": "🔥短剧┃推荐",
-      "key": "Hgdh",
-      "type": 3,
-      "api": "csp_HgdhAmns",
-      "searchable": 1,
-      "quickSearch": 1,
-      "changeable": 0,
-      "genre": "shortdrama",
-      "ext": "Hgdh"
-    ,
-      "jar": "./jar/bc.jar" },
-    {
-      "name": "🔥经典┃推荐",
-      "key": "Xxxg",
-      "type": 3,
-      "api": "csp_XxxgAmns",
-      "searchable": 0,
-      "quickSearch": 0,
-      "changeable": 0,
-      "ext": "Xxxg"
-   ,
-      "jar": "./jar/bc.jar" },
+  
 
 {
       "key": "红果短剧",
