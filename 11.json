@@ -97,6 +97,16 @@
       "filterable": 1,
       "timeout": 60
     },  
+
+	 {
+   "key": "py_hongguo",
+   "name": "红果[py]",
+   "type": 3,
+   "api": "./py/红果2.py",
+   "searchable": 1,
+   "quickSearch": 1,
+   "filterable": 1
+  },
 {
       "key": "搜剧AI",
       "name": "搜剧AI",
