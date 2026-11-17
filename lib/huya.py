@@ -48,7 +48,7 @@ HEADERS = {
 
 CATEGORIES = {
     "热门推荐": "2168",
-    "王者荣耀": "2336",    
+    "王者荣耀": "2336",
     "娱乐天地": "100022", 
     "户外": "2165",
     "一起看": "2135", 
@@ -215,8 +215,21 @@ class Spider(Spider):
             return live_url.replace('hls', 'flv').replace('m3u8', 'flv')
 
     def _get_play_url(self, room_id):
-        """获取真实播放地址"""
-        # 请求 profileRoom 接口
+        """获取播放地址 - 代理优先，官方签名兜底"""
+
+        # 代理地址
+        proxy_url = "https://live.ottiptv.cc/huya/" + str(room_id)
+
+        # 尝试代理
+        try:
+            # 简单验证代理可用性（HEAD 请求）
+            r = self.session.head(proxy_url, timeout=5)
+            if r.status_code in (200, 302, 301):
+                return proxy_url
+        except Exception:
+            pass
+
+        # 兜底：官方签名算法
         url = f"https://mp.huya.com/cache.php?m=Live&do=profileRoom&roomid={room_id}"
         data = self._fetch_json(url)
         if not data or data.get('status') != 200:
