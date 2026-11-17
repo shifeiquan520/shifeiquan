@@ -180,15 +180,6 @@
 
 
 
-{
-      "key": "1905",
-      "name": "1905｜影视",
-      "type": 3,
-      "api": "csp_Web1905",
-      "searchable": 1,
-      "quickSearch": 0,
-      "filterable": 0
-    }, 
     
  {
       "key": "移动",
