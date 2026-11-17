@@ -87,20 +87,9 @@
 
   
 
-{
-      "key": "红果短剧",
-      "name": "红果短剧",
-      "type": 3,
-      "api": "./py/红果.py",
-      "searchable": 1,
-      "quickSearch": 1,
-      "filterable": 1,
-      "timeout": 60
-    },  
-
 	 {
    "key": "py_hongguo",
-   "name": "红果[py]",
+   "name": "红果短剧",
    "type": 3,
    "api": "./py/红果2.py",
    "searchable": 1,
