@@ -94,7 +94,8 @@
    ,
       "jar": "./jar/bc.jar" },
  
-   
+   {"key":"豆瓣2","name":"豆瓣推荐","type":3,"api":"csp_Douban","searchable":0 },
+
       
     {
       "name": "短剧┃推荐",
