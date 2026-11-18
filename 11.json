@@ -62,7 +62,7 @@
         "ratio": 1.597
       }
     }, 
-{"key":"豆瓣2","name":"豆瓣推荐","type":3,"api":"csp_Douban","searchable":0 },
+
 {
   "key": "斗鱼直播",
   "name": "斗鱼直播",
@@ -83,11 +83,33 @@
   "filterable": 1,
   "timeout": 60
 },
+{
+      "name": "配置┃中心",
+      "key": "MyConfig",
+      "type": 3,
+      "api": "csp_AAConfigAmns",
+      "searchable": 0,
+      "quickSearch": 0,
+      "changeable": 0
+   ,
+      "jar": "./jar/bc.jar" },
+ 
+   
+      
+    {
+      "name": "短剧┃推荐",
+      "key": "Hgdh",
+      "type": 3,
+      "api": "csp_HgdhAmns",
+      "searchable": 1,
+      "quickSearch": 1,
+      "changeable": 0,
+      "genre": "shortdrama",
+      "ext": "Hgdh"
+    ,
+      "jar": "./jar/bc.jar" },
 
-
-  
-
-	 {
+	  {
    "key": "py_hongguo",
    "name": "红果短剧",
    "type": 3,
@@ -96,6 +118,30 @@
    "quickSearch": 1,
    "filterable": 1
   },
+    {
+      "name": "经典┃推荐",
+      "key": "Xxxg",
+      "type": 3,
+      "api": "csp_XxxgAmns",
+      "searchable": 0,
+      "quickSearch": 0,
+      "changeable": 0,
+      "ext": "Xxxg"
+     ,
+      "jar": "./jar/bc.jar" },
+    {
+      "name": "下饭┃推荐",
+      "key": "Xfdh",
+      "type": 3,
+      "api": "csp_XfdhAmns",
+      "searchable": 0,
+      "quickSearch": 0,
+      "changeable": 0
+    ,
+      "jar": "./jar/bc.jar" },
+  
+
+	
 {
       "key": "搜剧AI",
       "name": "搜剧AI",
@@ -107,7 +153,17 @@
       "timeout": 60
     },  
 
-
+ {
+      "name": "荐片影视",
+      "key": "JPian",
+      "type": 3,
+      "api": "csp_JPianAmns",
+      "searchable": 1,
+      "quickSearch": 1,
+      "changeable": 1,
+      "ext": "JPian"
+    ,
+      "jar": "./jar/bc.jar" },
 
  {
       "key": "热播影视",
@@ -129,50 +185,40 @@
       "ext": "https://vip.wwgz.cn:5200"
     },
  {
-      "name": "菠菜专线1",
+      "name": "浮舟专线",
       "key": "AppV7Fz",
       "type": 3,
       "api": "csp_AppV7Amns",
       "searchable": 1,
       "quickSearch": 1,
-      "changeable": 0,
+      "changeable": 1,
       "ext": "AppV7Fz"
     ,
       "jar": "./jar/bc.jar" },
 
-   
-    {
-      "name": "菠菜专线2",
-    "key": "AppV7Xy",
-      "type": 3,
-      "api": "csp_AppV7Amns",
-      "searchable": 1,
-      "quickSearch": 1,
-      "changeable": 0,
-      "ext": "AppV7Xy",
-       "jar": "./jar/bc.jar" },
+  
 
 
 
     {
-      "name": "菠菜专线3",
+      "name": "衔梦专线",
      "key": "AppV7Xnm",
       "type": 3,
       "api": "csp_AppV7Amns",
       "searchable": 1,
       "quickSearch": 1,
-      "changeable": 0,
+      "changeable": 1,
       "ext": "AppV7Xnm",
        "jar": "./jar/bc.jar" },
 
     {
-      "name": "菠菜专线4",
+      "name": "鸣泉专线",
        "key": "AppV7Mtq",
       "type": 3,
       "api": "csp_AppV7Amns",
       "searchable": 1,
       "quickSearch": 1,
-      "changeable": 0,
+      "changeable": 1,
       "ext": "AppV7Mtq",
        "jar": "./jar/bc.jar" },
 
@@ -192,7 +238,7 @@
     },  
 
  
-{"key": "360_spider","name": "360影视", "type": 3, "api": "csp_SP360", "filterable": 1,"quickSearch": 1,"searchable": 1 },
+
 
  {
       "key": "️小学",
